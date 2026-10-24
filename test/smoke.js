@@ -9,12 +9,12 @@ const srv = http.createServer((q, r) => {
   const b = await chromium.launch(); const pg = await b.newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(url);
-  await pg.fill('#newname', 'Test'); await pg.click('text=Ajouter'); await pg.click('button:has-text("Test")');
+  await pg.fill('#newname', 'Test'); await pg.fill('#newage', '18'); await pg.fill('#newage', '18'); await pg.click('text=Ajouter'); await pg.click('button:has-text("Test")');
   await pg.click('text=Ouvrir >> nth=0'); await pg.click('text=passer le vérificateur');
-  const total = await pg.evaluate(() => Q.items.length);
+  await pg.waitForFunction(() => Q && Q.items); const total = await pg.evaluate(() => Q.items.length);
   for (let i = 0; i < total; i++) { const ans = await pg.evaluate(() => Q.items[Q.k].answer); await pg.click(`button[data-v="${ans}"]`); }
   console.log('result:', (await pg.textContent('h2')));
-  await pg.click('text=Accueil'); console.log('home:', (await pg.textContent('.card')).replace(/\s+/g, ' ').trim());
+  await pg.click('text=Accueil'); console.log('home:', (await pg.textContent('#app')).replace(/\s+/g, ' ').slice(0, 500));
   await pg.click('text=Espace parent'); await pg.fill('#pin', '1234'); await pg.click('text=Valider');
   console.log('parent:', (await pg.textContent('#app')).replace(/\s+/g, ' ').slice(0, 250));
   console.log('errors:', errs);

@@ -18,11 +18,18 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const dayKey = t => new Date(t).toISOString().slice(0, 10);
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
+const cache = {};
+async function getJSON(f) {
+  if (!cache[f]) { const r = await fetch(f); if (!r.ok) throw new Error(f); cache[f] = await r.json(); }
+  return cache[f];
+}
+const surahFile = n => `data/coran/sourates/${String(n).padStart(3, '0')}.json`;
+
 async function boot() {
-  for (const f of ['data/quran-hafs.json', 'data/fixture.json']) {
-    try { const r = await fetch(f); if (r.ok) { data = await r.json(); data.file = f; break; } } catch (e) {}
-  }
-  if (!data) { $('app').innerHTML = '<p class="bad">Données introuvables.</p>'; return; }
+  try {
+    const [list, ordre, hq] = await Promise.all([getJSON('data/coran/sourates.json'), getJSON('data/coran/ordre_memorisation.json'), getJSON('data/hadiths/quotidien.json')]);
+    data = { surahs: list.map(x => ({ number: x.numero, name_ar: x.nom_arabe, name_fr: x.nom_translit, count: x.nb_versets })), ordre: ordre.ordre_sourates, hadiths: hq.hadiths, source: 'Complexe du Roi Fahd et Tanzil (Hafs), traduction Hamidullah. Détails dans data/CONTENU.md' };
+  } catch (e) { $('app').innerHTML = '<p class="bad">Données introuvables.</p>'; return; }
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
   cur = localStorage.getItem('ec.cur');
   if (!state.profiles.find(p => p.id === cur)) cur = null;
@@ -41,13 +48,13 @@ function switchProfile() { cur = null; localStorage.removeItem('ec.cur'); route(
 function profiles() {
   $('app').innerHTML = `<div class="card"><h2>Qui apprend ?</h2>
     ${state.profiles.map(p => `<button onclick="pick('${p.id}')">${esc(p.name)}</button>`).join('') || '<p class="muted">Aucun profil.</p>'}
-    <h3>Nouveau profil</h3><input id="newname" placeholder="Prénom" maxlength="30"> <button onclick="addProfile()">Ajouter</button></div>
+    <h3>Nouveau profil</h3><input id="newname" placeholder="Prénom" maxlength="30"> <input id="newage" type="number" min="4" max="99" placeholder="Âge" style="width:80px"> <button onclick="addProfile()">Ajouter</button></div>
     <p class="muted">Texte : ${esc(data.source)}</p>`;
 }
 function addProfile() {
-  const n = $('newname').value.trim();
-  if (!n) return;
-  state.profiles.push({ id: uid(), name: n, createdAt: Date.now() });
+  const n = $('newname').value.trim(), age = parseInt($('newage').value, 10);
+  if (!n || !(age > 0)) return;
+  state.profiles.push({ id: uid(), name: n, age, createdAt: Date.now() });
   save(); profiles();
 }
 function pick(id) { cur = id; localStorage.setItem('ec.cur', id); route(); }
@@ -60,39 +67,67 @@ function status(s) {
   return { label: 'En cours', pct: 40 };
 }
 
+function dailyHadith() {
+  const p = state.profiles.find(p => p.id === cur), list = data.hadiths, now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / DAY);
+  for (let k = 0; k < list.length; k++) {
+    const h = list[(doy + k) % list.length];
+    if (!h.accompagnement || (p && p.age >= 14)) return h;
+  }
+  return list[doy % list.length];
+}
+function nextSurah() {
+  const m = memo();
+  const n = data.ordre.find(x => !m[x] || !m[x].validated);
+  return n && data.surahs.find(s => s.number === n);
+}
+
 function home() {
   nav();
+  const h = dailyHadith(), nx = nextSurah();
   const dueList = data.surahs.filter(s => status(s).due);
   const done = data.surahs.filter(s => memo()[s.number] && memo()[s.number].validated).length;
   $('app').innerHTML = `
     <div class="card"><div class="row"><b>Progression</b><span>${done} / ${data.surahs.length} sourates validées</span></div>
     <div class="bar"><i style="width:${Math.round(100 * done / data.surahs.length)}%"></i></div></div>
+    ${nx ? `<div class="card"><b>À apprendre</b><br>${nx.number}. ${esc(nx.name_fr)} <button onclick="study(${nx.number})">Commencer</button></div>` : ''}
+    <div class="card"><b>Hadith du jour</b><div class="ar">${esc(h.ar)}</div><p>${esc(h.fr)}</p><p class="muted">${esc(h.recueil)} n° ${esc(h.numero)} · ${esc(h.grade.valeur)}</p></div>
     ${dueList.length ? `<div class="card"><b>À réviser aujourd'hui</b><br>${dueList.map(s => `<button onclick="study(${s.number})">${esc(s.name_fr)}</button>`).join('')}</div>` : ''}
     <div class="card"><b>Sourates</b>${data.surahs.map(s => { const st = status(s); return `<div class="row" style="padding:6px 0"><span>${s.number}. ${esc(s.name_fr)} <span class="muted">${esc(st.label)}</span></span><button class="ghost" onclick="study(${s.number})">Ouvrir</button></div>`; }).join('')}</div>`;
 }
 
-let startT = 0;
-function study(n) {
+let startT = 0, showFr = false, uthmani = false;
+async function study(n) {
   const s = data.surahs.find(x => x.number === n);
-  startT = Date.now();
+  if (!startT || cur !== studyOwner) startT = Date.now();
+  studyOwner = cur;
+  let v;
+  try { v = (await getJSON(surahFile(n))).versets; } catch (e) { $('app').innerHTML = '<p class="bad">Sourate introuvable.</p>'; return; }
   $('app').innerHTML = `<div class="card"><div class="row"><b>${esc(s.name_fr)}</b><span class="ar">${esc(s.name_ar)}</span></div>
-    ${s.ayahs.map(a => `<div class="ar">${esc(a.text)} <span class="muted">${a.n}</span></div>`).join('')}</div>
+    <label class="muted"><input type="checkbox" ${showFr ? 'checked' : ''} onchange="showFr=this.checked;study(${n})"> Traduction</label>
+    <label class="muted"><input type="checkbox" ${uthmani ? 'checked' : ''} onchange="uthmani=this.checked;study(${n})"> Texte uthmani (demande une police Coran)</label>
+    ${v.map(a => `<div class="ar">${esc(uthmani ? a.hafs : a.simple)} <span class="muted">${a.n}</span></div>${showFr ? `<div class="muted">${esc(a.fr)}</div>` : ''}`).join('')}</div>
     <button onclick="quiz(${n})">Je suis prêt, passer le vérificateur</button>
     <button class="ghost" onclick="finishStudy(${n})">Terminer la séance</button>`;
 }
+let studyOwner = null;
 function minutes() { return Math.max(1, Math.round((Date.now() - startT) / 60000)); }
 function finishStudy(n) {
   state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'study', surah: n, minutes: minutes() });
   const m = memo(); m[n] = m[n] || { validated: false, box: 0, due: 0 };
-  save(); home();
+  startT = 0; save(); home();
 }
 
 let Q = null;
-function quiz(n) {
+async function quiz(n) {
   const s = data.surahs.find(x => x.number === n);
-  const pool = [...new Set(data.surahs.flatMap(x => x.ayahs.flatMap(a => a.text.split(/\s+/))))];
-  const items = shuffle(s.ayahs).slice(0, 10).map(a => {
-    const w = a.text.split(/\s+/); const i = Math.floor(Math.random() * w.length);
+  const v = (await getJSON(surahFile(n))).versets;
+  const nb = n < 114 ? n + 1 : n - 1;
+  const other = (await getJSON(surahFile(nb))).versets;
+  const words = a => a.normalise.split(/\s+/).filter(Boolean);
+  const pool = [...new Set([...v, ...other].flatMap(words))];
+  const items = shuffle(v).slice(0, 10).map(a => {
+    const w = words(a); const i = Math.floor(Math.random() * w.length);
     const answer = w[i];
     const opts = shuffle([answer, ...shuffle(pool.filter(x => x !== answer)).slice(0, 3)]);
     return { n: a.n, words: w, i, answer, opts };
