@@ -1,0 +1,1028 @@
+[
+ {
+  "numero": 1,
+  "nom_arabe": "سُوْرَةُ الْفَاتِحَةِ",
+  "nom_translit": "Al-Faatiha",
+  "revelation": "mecquoise",
+  "nb_versets": 7,
+  "juz_debut": 1,
+  "page_debut_medine_hafs": 1
+ },
+ {
+  "numero": 2,
+  "nom_arabe": "سُوْرَةُ البَقَرَةِ",
+  "nom_translit": "Al-Baqara",
+  "revelation": "médinoise",
+  "nb_versets": 286,
+  "juz_debut": 1,
+  "page_debut_medine_hafs": 2
+ },
+ {
+  "numero": 3,
+  "nom_arabe": "سُوْرَةُ اٰلِ عِمْرٰنَ",
+  "nom_translit": "Aal-i-Imraan",
+  "revelation": "médinoise",
+  "nb_versets": 200,
+  "juz_debut": 3,
+  "page_debut_medine_hafs": 50
+ },
+ {
+  "numero": 4,
+  "nom_arabe": "سُوْرَةُ النِّسَآءِ",
+  "nom_translit": "An-Nisaa",
+  "revelation": "médinoise",
+  "nb_versets": 176,
+  "juz_debut": 4,
+  "page_debut_medine_hafs": 77
+ },
+ {
+  "numero": 5,
+  "nom_arabe": "سُوْرَةُ المَآئِدَةِ",
+  "nom_translit": "Al-Maaida",
+  "revelation": "médinoise",
+  "nb_versets": 120,
+  "juz_debut": 6,
+  "page_debut_medine_hafs": 106
+ },
+ {
+  "numero": 6,
+  "nom_arabe": "سُوْرَةُ الْاَنْعَامِ",
+  "nom_translit": "Al-An'aam",
+  "revelation": "mecquoise",
+  "nb_versets": 165,
+  "juz_debut": 7,
+  "page_debut_medine_hafs": 128
+ },
+ {
+  "numero": 7,
+  "nom_arabe": "سُوْرَةُ الْاَعْرَافِ",
+  "nom_translit": "Al-A'raaf",
+  "revelation": "mecquoise",
+  "nb_versets": 206,
+  "juz_debut": 8,
+  "page_debut_medine_hafs": 151
+ },
+ {
+  "numero": 8,
+  "nom_arabe": "سُوْرَةُ الْاَنْفَالِ",
+  "nom_translit": "Al-Anfaal",
+  "revelation": "médinoise",
+  "nb_versets": 75,
+  "juz_debut": 9,
+  "page_debut_medine_hafs": 177
+ },
+ {
+  "numero": 9,
+  "nom_arabe": "سُوْرَةُ التَّوْبَةِ",
+  "nom_translit": "At-Tawba",
+  "revelation": "médinoise",
+  "nb_versets": 129,
+  "juz_debut": 10,
+  "page_debut_medine_hafs": 187
+ },
+ {
+  "numero": 10,
+  "nom_arabe": "سُوْرَةُ يُوْنُسَ",
+  "nom_translit": "Yunus",
+  "revelation": "mecquoise",
+  "nb_versets": 109,
+  "juz_debut": 11,
+  "page_debut_medine_hafs": 208
+ },
+ {
+  "numero": 11,
+  "nom_arabe": "سُوْرَةُ هُوْدٍ",
+  "nom_translit": "Hud",
+  "revelation": "mecquoise",
+  "nb_versets": 123,
+  "juz_debut": 11,
+  "page_debut_medine_hafs": 221
+ },
+ {
+  "numero": 12,
+  "nom_arabe": "سُوْرَةُ يُوسُفَ",
+  "nom_translit": "Yusuf",
+  "revelation": "mecquoise",
+  "nb_versets": 111,
+  "juz_debut": 12,
+  "page_debut_medine_hafs": 235
+ },
+ {
+  "numero": 13,
+  "nom_arabe": "سُوْرَةُ الرَّعْدِ",
+  "nom_translit": "Ar-Ra'd",
+  "revelation": "médinoise",
+  "nb_versets": 43,
+  "juz_debut": 13,
+  "page_debut_medine_hafs": 249
+ },
+ {
+  "numero": 14,
+  "nom_arabe": "سُوْرَةُ اِبْرَاهِيْمَ",
+  "nom_translit": "Ibrahim",
+  "revelation": "mecquoise",
+  "nb_versets": 52,
+  "juz_debut": 13,
+  "page_debut_medine_hafs": 255
+ },
+ {
+  "numero": 15,
+  "nom_arabe": "سُوْرَةُ الْحِجْرِ",
+  "nom_translit": "Al-Hijr",
+  "revelation": "mecquoise",
+  "nb_versets": 99,
+  "juz_debut": 14,
+  "page_debut_medine_hafs": 262
+ },
+ {
+  "numero": 16,
+  "nom_arabe": "سُوْرَةُ النَّحْلِ",
+  "nom_translit": "An-Nahl",
+  "revelation": "mecquoise",
+  "nb_versets": 128,
+  "juz_debut": 14,
+  "page_debut_medine_hafs": 267
+ },
+ {
+  "numero": 17,
+  "nom_arabe": "سُوْرَةُ الإِسۡرَاءِ",
+  "nom_translit": "Al-Israa",
+  "revelation": "mecquoise",
+  "nb_versets": 111,
+  "juz_debut": 15,
+  "page_debut_medine_hafs": 282
+ },
+ {
+  "numero": 18,
+  "nom_arabe": "سُوْرَةُ الْكَهْفِ",
+  "nom_translit": "Al-Kahf",
+  "revelation": "mecquoise",
+  "nb_versets": 110,
+  "juz_debut": 15,
+  "page_debut_medine_hafs": 293
+ },
+ {
+  "numero": 19,
+  "nom_arabe": "سُوْرَةُ مَرْيَمَ",
+  "nom_translit": "Maryam",
+  "revelation": "mecquoise",
+  "nb_versets": 98,
+  "juz_debut": 16,
+  "page_debut_medine_hafs": 305
+ },
+ {
+  "numero": 20,
+  "nom_arabe": "سُوْرَةُ طٰهٰ",
+  "nom_translit": "Taa-Haa",
+  "revelation": "mecquoise",
+  "nb_versets": 135,
+  "juz_debut": 16,
+  "page_debut_medine_hafs": 312
+ },
+ {
+  "numero": 21,
+  "nom_arabe": "سُوْرَةُ الْاَنْۣبِيَآءِ",
+  "nom_translit": "Al-Anbiyaa",
+  "revelation": "mecquoise",
+  "nb_versets": 112,
+  "juz_debut": 17,
+  "page_debut_medine_hafs": 322
+ },
+ {
+  "numero": 22,
+  "nom_arabe": "سُوْرَةُ الْحَجِّ",
+  "nom_translit": "Al-Hajj",
+  "revelation": "médinoise",
+  "nb_versets": 78,
+  "juz_debut": 17,
+  "page_debut_medine_hafs": 332
+ },
+ {
+  "numero": 23,
+  "nom_arabe": "سُوْرَةُ الْمُؤْمِنُوْنَ",
+  "nom_translit": "Al-Muminoon",
+  "revelation": "mecquoise",
+  "nb_versets": 118,
+  "juz_debut": 18,
+  "page_debut_medine_hafs": 342
+ },
+ {
+  "numero": 24,
+  "nom_arabe": "سُوْرَةُ النُّوْرِ",
+  "nom_translit": "An-Noor",
+  "revelation": "médinoise",
+  "nb_versets": 64,
+  "juz_debut": 18,
+  "page_debut_medine_hafs": 350
+ },
+ {
+  "numero": 25,
+  "nom_arabe": "سُوْرَةُ الْفُرْقَانِ",
+  "nom_translit": "Al-Furqaan",
+  "revelation": "mecquoise",
+  "nb_versets": 77,
+  "juz_debut": 18,
+  "page_debut_medine_hafs": 359
+ },
+ {
+  "numero": 26,
+  "nom_arabe": "سُوْرَةُ الشُّعَرَآءِ",
+  "nom_translit": "Ash-Shu'araa",
+  "revelation": "mecquoise",
+  "nb_versets": 227,
+  "juz_debut": 19,
+  "page_debut_medine_hafs": 367
+ },
+ {
+  "numero": 27,
+  "nom_arabe": "سُوْرَةُ النَّمْلِ",
+  "nom_translit": "An-Naml",
+  "revelation": "mecquoise",
+  "nb_versets": 93,
+  "juz_debut": 19,
+  "page_debut_medine_hafs": 377
+ },
+ {
+  "numero": 28,
+  "nom_arabe": "سُوْرَةُ الْقَصَصِ",
+  "nom_translit": "Al-Qasas",
+  "revelation": "mecquoise",
+  "nb_versets": 88,
+  "juz_debut": 20,
+  "page_debut_medine_hafs": 385
+ },
+ {
+  "numero": 29,
+  "nom_arabe": "سُوْرَةُ الْعَنْكَبُوْتِ",
+  "nom_translit": "Al-Ankaboot",
+  "revelation": "mecquoise",
+  "nb_versets": 69,
+  "juz_debut": 20,
+  "page_debut_medine_hafs": 396
+ },
+ {
+  "numero": 30,
+  "nom_arabe": "سُوْرَةُ الرُّوْمِ",
+  "nom_translit": "Ar-Room",
+  "revelation": "mecquoise",
+  "nb_versets": 60,
+  "juz_debut": 21,
+  "page_debut_medine_hafs": 404
+ },
+ {
+  "numero": 31,
+  "nom_arabe": "سُوْرَةُ لُقْمَانَ",
+  "nom_translit": "Luqman",
+  "revelation": "mecquoise",
+  "nb_versets": 34,
+  "juz_debut": 21,
+  "page_debut_medine_hafs": 411
+ },
+ {
+  "numero": 32,
+  "nom_arabe": "سُوْرَةُ السَّجْدَةِ",
+  "nom_translit": "As-Sajda",
+  "revelation": "mecquoise",
+  "nb_versets": 30,
+  "juz_debut": 21,
+  "page_debut_medine_hafs": 415
+ },
+ {
+  "numero": 33,
+  "nom_arabe": "سُوْرَةُ الْاَحْزَابِ",
+  "nom_translit": "Al-Ahzaab",
+  "revelation": "médinoise",
+  "nb_versets": 73,
+  "juz_debut": 21,
+  "page_debut_medine_hafs": 418
+ },
+ {
+  "numero": 34,
+  "nom_arabe": "سُوْرَةُ سَبَاٍ",
+  "nom_translit": "Saba",
+  "revelation": "mecquoise",
+  "nb_versets": 54,
+  "juz_debut": 22,
+  "page_debut_medine_hafs": 428
+ },
+ {
+  "numero": 35,
+  "nom_arabe": "سُوْرَةُ فَاطِرٍ",
+  "nom_translit": "Faatir",
+  "revelation": "mecquoise",
+  "nb_versets": 45,
+  "juz_debut": 22,
+  "page_debut_medine_hafs": 434
+ },
+ {
+  "numero": 36,
+  "nom_arabe": "سُوْرَةُ يٰسٓ",
+  "nom_translit": "Yaseen",
+  "revelation": "mecquoise",
+  "nb_versets": 83,
+  "juz_debut": 22,
+  "page_debut_medine_hafs": 440
+ },
+ {
+  "numero": 37,
+  "nom_arabe": "سُوْرَةُ الصَّافَّاتِ",
+  "nom_translit": "As-Saaffaat",
+  "revelation": "mecquoise",
+  "nb_versets": 182,
+  "juz_debut": 23,
+  "page_debut_medine_hafs": 446
+ },
+ {
+  "numero": 38,
+  "nom_arabe": "سُوْرَةُ صٓ",
+  "nom_translit": "Saad",
+  "revelation": "mecquoise",
+  "nb_versets": 88,
+  "juz_debut": 23,
+  "page_debut_medine_hafs": 453
+ },
+ {
+  "numero": 39,
+  "nom_arabe": "سُوْرَةُ الزُّمَرِ",
+  "nom_translit": "Az-Zumar",
+  "revelation": "mecquoise",
+  "nb_versets": 75,
+  "juz_debut": 23,
+  "page_debut_medine_hafs": 458
+ },
+ {
+  "numero": 40,
+  "nom_arabe": "سُوْرَةُ الْمُؤْمِنِ",
+  "nom_translit": "Ghafir",
+  "revelation": "mecquoise",
+  "nb_versets": 85,
+  "juz_debut": 24,
+  "page_debut_medine_hafs": 467
+ },
+ {
+  "numero": 41,
+  "nom_arabe": "سُوْرَةُ فُصِّلَتۡ",
+  "nom_translit": "Fussilat",
+  "revelation": "mecquoise",
+  "nb_versets": 54,
+  "juz_debut": 24,
+  "page_debut_medine_hafs": 477
+ },
+ {
+  "numero": 42,
+  "nom_arabe": "سُوْرَةُ الشُّوْرٰي",
+  "nom_translit": "Ash-Shura",
+  "revelation": "mecquoise",
+  "nb_versets": 53,
+  "juz_debut": 25,
+  "page_debut_medine_hafs": 483
+ },
+ {
+  "numero": 43,
+  "nom_arabe": "سُوْرَةُ الزُّخْرُفِ",
+  "nom_translit": "Az-Zukhruf",
+  "revelation": "mecquoise",
+  "nb_versets": 89,
+  "juz_debut": 25,
+  "page_debut_medine_hafs": 489
+ },
+ {
+  "numero": 44,
+  "nom_arabe": "سُوْرَةُ الدُّخَانِ",
+  "nom_translit": "Ad-Dukhaan",
+  "revelation": "mecquoise",
+  "nb_versets": 59,
+  "juz_debut": 25,
+  "page_debut_medine_hafs": 496
+ },
+ {
+  "numero": 45,
+  "nom_arabe": "سُوْرَةُ الْجَاثِيَةِ",
+  "nom_translit": "Al-Jaathiya",
+  "revelation": "mecquoise",
+  "nb_versets": 37,
+  "juz_debut": 25,
+  "page_debut_medine_hafs": 499
+ },
+ {
+  "numero": 46,
+  "nom_arabe": "سُوْرَةُ الْاَحْقَافِ",
+  "nom_translit": "Al-Ahqaf",
+  "revelation": "mecquoise",
+  "nb_versets": 35,
+  "juz_debut": 26,
+  "page_debut_medine_hafs": 502
+ },
+ {
+  "numero": 47,
+  "nom_arabe": "سُوْرَةُ مُحَمَّدٍ",
+  "nom_translit": "Muhammad",
+  "revelation": "médinoise",
+  "nb_versets": 38,
+  "juz_debut": 26,
+  "page_debut_medine_hafs": 507
+ },
+ {
+  "numero": 48,
+  "nom_arabe": "سُوْرَةُ الْفَتْحِ",
+  "nom_translit": "Al-Fath",
+  "revelation": "médinoise",
+  "nb_versets": 29,
+  "juz_debut": 26,
+  "page_debut_medine_hafs": 511
+ },
+ {
+  "numero": 49,
+  "nom_arabe": "سُوْرَةُ الْحُجُراتِ",
+  "nom_translit": "Al-Hujuraat",
+  "revelation": "médinoise",
+  "nb_versets": 18,
+  "juz_debut": 26,
+  "page_debut_medine_hafs": 515
+ },
+ {
+  "numero": 50,
+  "nom_arabe": "سُوْرَةُ قٓ",
+  "nom_translit": "Qaaf",
+  "revelation": "mecquoise",
+  "nb_versets": 45,
+  "juz_debut": 26,
+  "page_debut_medine_hafs": 518
+ },
+ {
+  "numero": 51,
+  "nom_arabe": "سُوْرَةُ الذَّارِياتِ",
+  "nom_translit": "Adh-Dhaariyat",
+  "revelation": "mecquoise",
+  "nb_versets": 60,
+  "juz_debut": 26,
+  "page_debut_medine_hafs": 520
+ },
+ {
+  "numero": 52,
+  "nom_arabe": "سُوْرَةُ الطُّوْرِ",
+  "nom_translit": "At-Tur",
+  "revelation": "mecquoise",
+  "nb_versets": 49,
+  "juz_debut": 27,
+  "page_debut_medine_hafs": 523
+ },
+ {
+  "numero": 53,
+  "nom_arabe": "سُوْرَةُ النَّجْمِ",
+  "nom_translit": "An-Najm",
+  "revelation": "mecquoise",
+  "nb_versets": 62,
+  "juz_debut": 27,
+  "page_debut_medine_hafs": 526
+ },
+ {
+  "numero": 54,
+  "nom_arabe": "سُوْرَةُ الْقَمَرِ",
+  "nom_translit": "Al-Qamar",
+  "revelation": "mecquoise",
+  "nb_versets": 55,
+  "juz_debut": 27,
+  "page_debut_medine_hafs": 528
+ },
+ {
+  "numero": 55,
+  "nom_arabe": "سُوْرَةُ الرَّحْمٰنِ",
+  "nom_translit": "Ar-Rahmaan",
+  "revelation": "médinoise",
+  "nb_versets": 78,
+  "juz_debut": 27,
+  "page_debut_medine_hafs": 531
+ },
+ {
+  "numero": 56,
+  "nom_arabe": "سُوْرَةُ الْوَاقِعَةِ",
+  "nom_translit": "Al-Waaqia",
+  "revelation": "mecquoise",
+  "nb_versets": 96,
+  "juz_debut": 27,
+  "page_debut_medine_hafs": 534
+ },
+ {
+  "numero": 57,
+  "nom_arabe": "سُوْرَةُ الْحَدِيْدِ",
+  "nom_translit": "Al-Hadid",
+  "revelation": "médinoise",
+  "nb_versets": 29,
+  "juz_debut": 27,
+  "page_debut_medine_hafs": 537
+ },
+ {
+  "numero": 58,
+  "nom_arabe": "سُوْرَةُ الْمُجَادَلَةِ",
+  "nom_translit": "Al-Mujaadila",
+  "revelation": "médinoise",
+  "nb_versets": 22,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 542
+ },
+ {
+  "numero": 59,
+  "nom_arabe": "سُوْرَةُ الْحَشْرِ",
+  "nom_translit": "Al-Hashr",
+  "revelation": "médinoise",
+  "nb_versets": 24,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 545
+ },
+ {
+  "numero": 60,
+  "nom_arabe": "سُوْرَةُ الْمُمْتَحِنَةِ",
+  "nom_translit": "Al-Mumtahana",
+  "revelation": "médinoise",
+  "nb_versets": 13,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 549
+ },
+ {
+  "numero": 61,
+  "nom_arabe": "سُوْرَةُ الصَّفِّ",
+  "nom_translit": "As-Saff",
+  "revelation": "médinoise",
+  "nb_versets": 14,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 551
+ },
+ {
+  "numero": 62,
+  "nom_arabe": "سُوْرَةُ الْجُمُعَةِ",
+  "nom_translit": "Al-Jumu'a",
+  "revelation": "médinoise",
+  "nb_versets": 11,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 553
+ },
+ {
+  "numero": 63,
+  "nom_arabe": "سُوْرَةُ الْمُنَافِقُوْنَ",
+  "nom_translit": "Al-Munaafiqoon",
+  "revelation": "médinoise",
+  "nb_versets": 11,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 554
+ },
+ {
+  "numero": 64,
+  "nom_arabe": "سُوْرَةُ التَّغَابُنِ",
+  "nom_translit": "At-Taghaabun",
+  "revelation": "médinoise",
+  "nb_versets": 18,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 556
+ },
+ {
+  "numero": 65,
+  "nom_arabe": "سُوْرَةُ الطَّلَاقِ",
+  "nom_translit": "At-Talaaq",
+  "revelation": "médinoise",
+  "nb_versets": 12,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 558
+ },
+ {
+  "numero": 66,
+  "nom_arabe": "سُوْرَةُ التَّحْرِيْمِ",
+  "nom_translit": "At-Tahrim",
+  "revelation": "médinoise",
+  "nb_versets": 12,
+  "juz_debut": 28,
+  "page_debut_medine_hafs": 560
+ },
+ {
+  "numero": 67,
+  "nom_arabe": "سُوْرَةُ الْمُلْكِ",
+  "nom_translit": "Al-Mulk",
+  "revelation": "mecquoise",
+  "nb_versets": 30,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 562
+ },
+ {
+  "numero": 68,
+  "nom_arabe": "سُوْرَةُ الْقَلَمِ",
+  "nom_translit": "Al-Qalam",
+  "revelation": "mecquoise",
+  "nb_versets": 52,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 564
+ },
+ {
+  "numero": 69,
+  "nom_arabe": "سُوْرَةُ الْحَآقَّةِ",
+  "nom_translit": "Al-Haaqqa",
+  "revelation": "mecquoise",
+  "nb_versets": 52,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 566
+ },
+ {
+  "numero": 70,
+  "nom_arabe": "سُوْرَةُ الْمَعَارِجِ",
+  "nom_translit": "Al-Ma'aarij",
+  "revelation": "mecquoise",
+  "nb_versets": 44,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 568
+ },
+ {
+  "numero": 71,
+  "nom_arabe": "سُوْرَةُ نُوْحٍ",
+  "nom_translit": "Nooh",
+  "revelation": "mecquoise",
+  "nb_versets": 28,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 570
+ },
+ {
+  "numero": 72,
+  "nom_arabe": "سُوْرَةُ الْجِنِّ",
+  "nom_translit": "Al-Jinn",
+  "revelation": "mecquoise",
+  "nb_versets": 28,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 572
+ },
+ {
+  "numero": 73,
+  "nom_arabe": "سُوْرَةُ الْمُزَّمِّلِ",
+  "nom_translit": "Al-Muzzammil",
+  "revelation": "mecquoise",
+  "nb_versets": 20,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 574
+ },
+ {
+  "numero": 74,
+  "nom_arabe": "سُوْرَةُ الْمُدَّثِّرِ",
+  "nom_translit": "Al-Muddaththir",
+  "revelation": "mecquoise",
+  "nb_versets": 56,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 575
+ },
+ {
+  "numero": 75,
+  "nom_arabe": "سُوْرَةُ الْقِيَامَةِ",
+  "nom_translit": "Al-Qiyaama",
+  "revelation": "mecquoise",
+  "nb_versets": 40,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 577
+ },
+ {
+  "numero": 76,
+  "nom_arabe": "سُوْرَةُ الدَّهْرِ",
+  "nom_translit": "Al-Insaan",
+  "revelation": "médinoise",
+  "nb_versets": 31,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 578
+ },
+ {
+  "numero": 77,
+  "nom_arabe": "سُوْرَةُ الْمُرْسَلَاتِ",
+  "nom_translit": "Al-Mursalaat",
+  "revelation": "mecquoise",
+  "nb_versets": 50,
+  "juz_debut": 29,
+  "page_debut_medine_hafs": 580
+ },
+ {
+  "numero": 78,
+  "nom_arabe": "سُوْرَةُ النَّبَاِ",
+  "nom_translit": "An-Naba",
+  "revelation": "mecquoise",
+  "nb_versets": 40,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 582
+ },
+ {
+  "numero": 79,
+  "nom_arabe": "سُوْرَةُ النَّازِعَاتِ",
+  "nom_translit": "An-Naazi'aat",
+  "revelation": "mecquoise",
+  "nb_versets": 46,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 583
+ },
+ {
+  "numero": 80,
+  "nom_arabe": "سُوْرَةُ عَبَسَ",
+  "nom_translit": "Abasa",
+  "revelation": "mecquoise",
+  "nb_versets": 42,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 585
+ },
+ {
+  "numero": 81,
+  "nom_arabe": "سُوْرَةُ التَّكْوِيْرِ",
+  "nom_translit": "At-Takwir",
+  "revelation": "mecquoise",
+  "nb_versets": 29,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 586
+ },
+ {
+  "numero": 82,
+  "nom_arabe": "سُوْرَةُ الْاِنْفِطَارِ",
+  "nom_translit": "Al-Infitaar",
+  "revelation": "mecquoise",
+  "nb_versets": 19,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 587
+ },
+ {
+  "numero": 83,
+  "nom_arabe": "سُوْرَةُ المُطَفِّفِيْنَ",
+  "nom_translit": "Al-Mutaffifin",
+  "revelation": "mecquoise",
+  "nb_versets": 36,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 587
+ },
+ {
+  "numero": 84,
+  "nom_arabe": "سُوْرَةُ الاِنْشِقَاقِ",
+  "nom_translit": "Al-Inshiqaaq",
+  "revelation": "mecquoise",
+  "nb_versets": 25,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 589
+ },
+ {
+  "numero": 85,
+  "nom_arabe": "سُوْرَةُ الْبُرُوْجِ",
+  "nom_translit": "Al-Burooj",
+  "revelation": "mecquoise",
+  "nb_versets": 22,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 590
+ },
+ {
+  "numero": 86,
+  "nom_arabe": "سُوْرَةُ الطَّارِقِ",
+  "nom_translit": "At-Taariq",
+  "revelation": "mecquoise",
+  "nb_versets": 17,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 591
+ },
+ {
+  "numero": 87,
+  "nom_arabe": "سُوْرَةُ الْاَعْلٰي",
+  "nom_translit": "Al-A'laa",
+  "revelation": "mecquoise",
+  "nb_versets": 19,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 591
+ },
+ {
+  "numero": 88,
+  "nom_arabe": "سُوْرَةُ الْغَاشِيَةِ",
+  "nom_translit": "Al-Ghaashiya",
+  "revelation": "mecquoise",
+  "nb_versets": 26,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 592
+ },
+ {
+  "numero": 89,
+  "nom_arabe": "سُوْرَةُ الْفَجْرِ",
+  "nom_translit": "Al-Fajr",
+  "revelation": "mecquoise",
+  "nb_versets": 30,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 593
+ },
+ {
+  "numero": 90,
+  "nom_arabe": "سُوْرَةُ الْبَلَدِ",
+  "nom_translit": "Al-Balad",
+  "revelation": "mecquoise",
+  "nb_versets": 20,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 594
+ },
+ {
+  "numero": 91,
+  "nom_arabe": "سُوْرَةُ الشَّمْسِ",
+  "nom_translit": "Ash-Shams",
+  "revelation": "mecquoise",
+  "nb_versets": 15,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 595
+ },
+ {
+  "numero": 92,
+  "nom_arabe": "سُوْرَةُ الَّيْلِ",
+  "nom_translit": "Al-Lail",
+  "revelation": "mecquoise",
+  "nb_versets": 21,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 595
+ },
+ {
+  "numero": 93,
+  "nom_arabe": "سُوْرَةُ الضُّحٰي",
+  "nom_translit": "Ad-Dhuhaa",
+  "revelation": "mecquoise",
+  "nb_versets": 11,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 596
+ },
+ {
+  "numero": 94,
+  "nom_arabe": "سُوْرَةُ الشَّرْحِ",
+  "nom_translit": "Ash-Sharh",
+  "revelation": "mecquoise",
+  "nb_versets": 8,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 596
+ },
+ {
+  "numero": 95,
+  "nom_arabe": "سُوْرَةُ التِّيْنِ",
+  "nom_translit": "At-Tin",
+  "revelation": "mecquoise",
+  "nb_versets": 8,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 597
+ },
+ {
+  "numero": 96,
+  "nom_arabe": "سُوْرَةُ الْعَلَقِ",
+  "nom_translit": "Al-Alaq",
+  "revelation": "mecquoise",
+  "nb_versets": 19,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 597
+ },
+ {
+  "numero": 97,
+  "nom_arabe": "سُوْرَةُ الْقَدْرِ",
+  "nom_translit": "Al-Qadr",
+  "revelation": "mecquoise",
+  "nb_versets": 5,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 598
+ },
+ {
+  "numero": 98,
+  "nom_arabe": "سُوْرَةُ الْبَيِّنَةِ",
+  "nom_translit": "Al-Bayyina",
+  "revelation": "médinoise",
+  "nb_versets": 8,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 598
+ },
+ {
+  "numero": 99,
+  "nom_arabe": "سُوْرَةُ الزِّلْزَالِ",
+  "nom_translit": "Az-Zalzala",
+  "revelation": "médinoise",
+  "nb_versets": 8,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 599
+ },
+ {
+  "numero": 100,
+  "nom_arabe": "سُوْرَةُ العٰدِيٰتِ",
+  "nom_translit": "Al-Aadiyaat",
+  "revelation": "mecquoise",
+  "nb_versets": 11,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 599
+ },
+ {
+  "numero": 101,
+  "nom_arabe": "سُوْرَةُ الْقَارِعَةِ",
+  "nom_translit": "Al-Qaari'a",
+  "revelation": "mecquoise",
+  "nb_versets": 11,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 600
+ },
+ {
+  "numero": 102,
+  "nom_arabe": "سُوْرَةُ التَّكَاثُرِ",
+  "nom_translit": "At-Takaathur",
+  "revelation": "mecquoise",
+  "nb_versets": 8,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 600
+ },
+ {
+  "numero": 103,
+  "nom_arabe": "سُوْرَةُ الْعَصْرِ",
+  "nom_translit": "Al-Asr",
+  "revelation": "mecquoise",
+  "nb_versets": 3,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 601
+ },
+ {
+  "numero": 104,
+  "nom_arabe": "سُوْرَةُ الْهُمَزَةِ",
+  "nom_translit": "Al-Humaza",
+  "revelation": "mecquoise",
+  "nb_versets": 9,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 601
+ },
+ {
+  "numero": 105,
+  "nom_arabe": "سُوْرَةُ الْفِيْلِ",
+  "nom_translit": "Al-Fil",
+  "revelation": "mecquoise",
+  "nb_versets": 5,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 601
+ },
+ {
+  "numero": 106,
+  "nom_arabe": "سُوْرَةُ قُرَيْشٍ",
+  "nom_translit": "Quraish",
+  "revelation": "mecquoise",
+  "nb_versets": 4,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 602
+ },
+ {
+  "numero": 107,
+  "nom_arabe": "سُوْرَةُ الْمَاعُوْنِ",
+  "nom_translit": "Al-Maa'un",
+  "revelation": "mecquoise",
+  "nb_versets": 7,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 602
+ },
+ {
+  "numero": 108,
+  "nom_arabe": "سُوْرَةُ الْكَوْثَرِ",
+  "nom_translit": "Al-Kawthar",
+  "revelation": "mecquoise",
+  "nb_versets": 3,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 602
+ },
+ {
+  "numero": 109,
+  "nom_arabe": "سُوْرَةُ الْكَافِرُوْنَ",
+  "nom_translit": "Al-Kaafiroon",
+  "revelation": "mecquoise",
+  "nb_versets": 6,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 603
+ },
+ {
+  "numero": 110,
+  "nom_arabe": "سُوْرَةُ النَّصْرِ",
+  "nom_translit": "An-Nasr",
+  "revelation": "médinoise",
+  "nb_versets": 3,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 603
+ },
+ {
+  "numero": 111,
+  "nom_arabe": "سُوْرَةُ المَسَدِ",
+  "nom_translit": "Al-Masad",
+  "revelation": "mecquoise",
+  "nb_versets": 5,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 603
+ },
+ {
+  "numero": 112,
+  "nom_arabe": "سُوْرَةُ الْاِخْلَاصِ",
+  "nom_translit": "Al-Ikhlaas",
+  "revelation": "mecquoise",
+  "nb_versets": 4,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 604
+ },
+ {
+  "numero": 113,
+  "nom_arabe": "سُوْرَةُ الْفَلَقِ",
+  "nom_translit": "Al-Falaq",
+  "revelation": "mecquoise",
+  "nb_versets": 5,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 604
+ },
+ {
+  "numero": 114,
+  "nom_arabe": "سُوْرَةُ النَّاسِ",
+  "nom_translit": "An-Naas",
+  "revelation": "mecquoise",
+  "nb_versets": 6,
+  "juz_debut": 30,
+  "page_debut_medine_hafs": 604
+ }
+]

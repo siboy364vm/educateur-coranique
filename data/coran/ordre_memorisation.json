@@ -1,0 +1,919 @@
+{
+ "convention": "Ordre traditionnel des écoles coraniques d'Afrique de l'Ouest et du Maghreb : al-Fatiha, puis de an-Nas (114) en remontant jusqu'à al-Baqara (2). Convention pédagogique modifiable, pas une règle religieuse.",
+ "ordre_sourates": [
+  1,
+  114,
+  113,
+  112,
+  111,
+  110,
+  109,
+  108,
+  107,
+  106,
+  105,
+  104,
+  103,
+  102,
+  101,
+  100,
+  99,
+  98,
+  97,
+  96,
+  95,
+  94,
+  93,
+  92,
+  91,
+  90,
+  89,
+  88,
+  87,
+  86,
+  85,
+  84,
+  83,
+  82,
+  81,
+  80,
+  79,
+  78,
+  77,
+  76,
+  75,
+  74,
+  73,
+  72,
+  71,
+  70,
+  69,
+  68,
+  67,
+  66,
+  65,
+  64,
+  63,
+  62,
+  61,
+  60,
+  59,
+  58,
+  57,
+  56,
+  55,
+  54,
+  53,
+  52,
+  51,
+  50,
+  49,
+  48,
+  47,
+  46,
+  45,
+  44,
+  43,
+  42,
+  41,
+  40,
+  39,
+  38,
+  37,
+  36,
+  35,
+  34,
+  33,
+  32,
+  31,
+  30,
+  29,
+  28,
+  27,
+  26,
+  25,
+  24,
+  23,
+  22,
+  21,
+  20,
+  19,
+  18,
+  17,
+  16,
+  15,
+  14,
+  13,
+  12,
+  11,
+  10,
+  9,
+  8,
+  7,
+  6,
+  5,
+  4,
+  3,
+  2
+ ],
+ "etapes": [
+  {
+   "rang": 1,
+   "sourate": 1,
+   "nom": "Al-Faatiha",
+   "nb_versets": 7,
+   "juz": 1
+  },
+  {
+   "rang": 2,
+   "sourate": 114,
+   "nom": "An-Naas",
+   "nb_versets": 6,
+   "juz": 30
+  },
+  {
+   "rang": 3,
+   "sourate": 113,
+   "nom": "Al-Falaq",
+   "nb_versets": 5,
+   "juz": 30
+  },
+  {
+   "rang": 4,
+   "sourate": 112,
+   "nom": "Al-Ikhlaas",
+   "nb_versets": 4,
+   "juz": 30
+  },
+  {
+   "rang": 5,
+   "sourate": 111,
+   "nom": "Al-Masad",
+   "nb_versets": 5,
+   "juz": 30
+  },
+  {
+   "rang": 6,
+   "sourate": 110,
+   "nom": "An-Nasr",
+   "nb_versets": 3,
+   "juz": 30
+  },
+  {
+   "rang": 7,
+   "sourate": 109,
+   "nom": "Al-Kaafiroon",
+   "nb_versets": 6,
+   "juz": 30
+  },
+  {
+   "rang": 8,
+   "sourate": 108,
+   "nom": "Al-Kawthar",
+   "nb_versets": 3,
+   "juz": 30
+  },
+  {
+   "rang": 9,
+   "sourate": 107,
+   "nom": "Al-Maa'un",
+   "nb_versets": 7,
+   "juz": 30
+  },
+  {
+   "rang": 10,
+   "sourate": 106,
+   "nom": "Quraish",
+   "nb_versets": 4,
+   "juz": 30
+  },
+  {
+   "rang": 11,
+   "sourate": 105,
+   "nom": "Al-Fil",
+   "nb_versets": 5,
+   "juz": 30
+  },
+  {
+   "rang": 12,
+   "sourate": 104,
+   "nom": "Al-Humaza",
+   "nb_versets": 9,
+   "juz": 30
+  },
+  {
+   "rang": 13,
+   "sourate": 103,
+   "nom": "Al-Asr",
+   "nb_versets": 3,
+   "juz": 30
+  },
+  {
+   "rang": 14,
+   "sourate": 102,
+   "nom": "At-Takaathur",
+   "nb_versets": 8,
+   "juz": 30
+  },
+  {
+   "rang": 15,
+   "sourate": 101,
+   "nom": "Al-Qaari'a",
+   "nb_versets": 11,
+   "juz": 30
+  },
+  {
+   "rang": 16,
+   "sourate": 100,
+   "nom": "Al-Aadiyaat",
+   "nb_versets": 11,
+   "juz": 30
+  },
+  {
+   "rang": 17,
+   "sourate": 99,
+   "nom": "Az-Zalzala",
+   "nb_versets": 8,
+   "juz": 30
+  },
+  {
+   "rang": 18,
+   "sourate": 98,
+   "nom": "Al-Bayyina",
+   "nb_versets": 8,
+   "juz": 30
+  },
+  {
+   "rang": 19,
+   "sourate": 97,
+   "nom": "Al-Qadr",
+   "nb_versets": 5,
+   "juz": 30
+  },
+  {
+   "rang": 20,
+   "sourate": 96,
+   "nom": "Al-Alaq",
+   "nb_versets": 19,
+   "juz": 30
+  },
+  {
+   "rang": 21,
+   "sourate": 95,
+   "nom": "At-Tin",
+   "nb_versets": 8,
+   "juz": 30
+  },
+  {
+   "rang": 22,
+   "sourate": 94,
+   "nom": "Ash-Sharh",
+   "nb_versets": 8,
+   "juz": 30
+  },
+  {
+   "rang": 23,
+   "sourate": 93,
+   "nom": "Ad-Dhuhaa",
+   "nb_versets": 11,
+   "juz": 30
+  },
+  {
+   "rang": 24,
+   "sourate": 92,
+   "nom": "Al-Lail",
+   "nb_versets": 21,
+   "juz": 30
+  },
+  {
+   "rang": 25,
+   "sourate": 91,
+   "nom": "Ash-Shams",
+   "nb_versets": 15,
+   "juz": 30
+  },
+  {
+   "rang": 26,
+   "sourate": 90,
+   "nom": "Al-Balad",
+   "nb_versets": 20,
+   "juz": 30
+  },
+  {
+   "rang": 27,
+   "sourate": 89,
+   "nom": "Al-Fajr",
+   "nb_versets": 30,
+   "juz": 30
+  },
+  {
+   "rang": 28,
+   "sourate": 88,
+   "nom": "Al-Ghaashiya",
+   "nb_versets": 26,
+   "juz": 30
+  },
+  {
+   "rang": 29,
+   "sourate": 87,
+   "nom": "Al-A'laa",
+   "nb_versets": 19,
+   "juz": 30
+  },
+  {
+   "rang": 30,
+   "sourate": 86,
+   "nom": "At-Taariq",
+   "nb_versets": 17,
+   "juz": 30
+  },
+  {
+   "rang": 31,
+   "sourate": 85,
+   "nom": "Al-Burooj",
+   "nb_versets": 22,
+   "juz": 30
+  },
+  {
+   "rang": 32,
+   "sourate": 84,
+   "nom": "Al-Inshiqaaq",
+   "nb_versets": 25,
+   "juz": 30
+  },
+  {
+   "rang": 33,
+   "sourate": 83,
+   "nom": "Al-Mutaffifin",
+   "nb_versets": 36,
+   "juz": 30
+  },
+  {
+   "rang": 34,
+   "sourate": 82,
+   "nom": "Al-Infitaar",
+   "nb_versets": 19,
+   "juz": 30
+  },
+  {
+   "rang": 35,
+   "sourate": 81,
+   "nom": "At-Takwir",
+   "nb_versets": 29,
+   "juz": 30
+  },
+  {
+   "rang": 36,
+   "sourate": 80,
+   "nom": "Abasa",
+   "nb_versets": 42,
+   "juz": 30
+  },
+  {
+   "rang": 37,
+   "sourate": 79,
+   "nom": "An-Naazi'aat",
+   "nb_versets": 46,
+   "juz": 30
+  },
+  {
+   "rang": 38,
+   "sourate": 78,
+   "nom": "An-Naba",
+   "nb_versets": 40,
+   "juz": 30
+  },
+  {
+   "rang": 39,
+   "sourate": 77,
+   "nom": "Al-Mursalaat",
+   "nb_versets": 50,
+   "juz": 29
+  },
+  {
+   "rang": 40,
+   "sourate": 76,
+   "nom": "Al-Insaan",
+   "nb_versets": 31,
+   "juz": 29
+  },
+  {
+   "rang": 41,
+   "sourate": 75,
+   "nom": "Al-Qiyaama",
+   "nb_versets": 40,
+   "juz": 29
+  },
+  {
+   "rang": 42,
+   "sourate": 74,
+   "nom": "Al-Muddaththir",
+   "nb_versets": 56,
+   "juz": 29
+  },
+  {
+   "rang": 43,
+   "sourate": 73,
+   "nom": "Al-Muzzammil",
+   "nb_versets": 20,
+   "juz": 29
+  },
+  {
+   "rang": 44,
+   "sourate": 72,
+   "nom": "Al-Jinn",
+   "nb_versets": 28,
+   "juz": 29
+  },
+  {
+   "rang": 45,
+   "sourate": 71,
+   "nom": "Nooh",
+   "nb_versets": 28,
+   "juz": 29
+  },
+  {
+   "rang": 46,
+   "sourate": 70,
+   "nom": "Al-Ma'aarij",
+   "nb_versets": 44,
+   "juz": 29
+  },
+  {
+   "rang": 47,
+   "sourate": 69,
+   "nom": "Al-Haaqqa",
+   "nb_versets": 52,
+   "juz": 29
+  },
+  {
+   "rang": 48,
+   "sourate": 68,
+   "nom": "Al-Qalam",
+   "nb_versets": 52,
+   "juz": 29
+  },
+  {
+   "rang": 49,
+   "sourate": 67,
+   "nom": "Al-Mulk",
+   "nb_versets": 30,
+   "juz": 29
+  },
+  {
+   "rang": 50,
+   "sourate": 66,
+   "nom": "At-Tahrim",
+   "nb_versets": 12,
+   "juz": 28
+  },
+  {
+   "rang": 51,
+   "sourate": 65,
+   "nom": "At-Talaaq",
+   "nb_versets": 12,
+   "juz": 28
+  },
+  {
+   "rang": 52,
+   "sourate": 64,
+   "nom": "At-Taghaabun",
+   "nb_versets": 18,
+   "juz": 28
+  },
+  {
+   "rang": 53,
+   "sourate": 63,
+   "nom": "Al-Munaafiqoon",
+   "nb_versets": 11,
+   "juz": 28
+  },
+  {
+   "rang": 54,
+   "sourate": 62,
+   "nom": "Al-Jumu'a",
+   "nb_versets": 11,
+   "juz": 28
+  },
+  {
+   "rang": 55,
+   "sourate": 61,
+   "nom": "As-Saff",
+   "nb_versets": 14,
+   "juz": 28
+  },
+  {
+   "rang": 56,
+   "sourate": 60,
+   "nom": "Al-Mumtahana",
+   "nb_versets": 13,
+   "juz": 28
+  },
+  {
+   "rang": 57,
+   "sourate": 59,
+   "nom": "Al-Hashr",
+   "nb_versets": 24,
+   "juz": 28
+  },
+  {
+   "rang": 58,
+   "sourate": 58,
+   "nom": "Al-Mujaadila",
+   "nb_versets": 22,
+   "juz": 28
+  },
+  {
+   "rang": 59,
+   "sourate": 57,
+   "nom": "Al-Hadid",
+   "nb_versets": 29,
+   "juz": 27
+  },
+  {
+   "rang": 60,
+   "sourate": 56,
+   "nom": "Al-Waaqia",
+   "nb_versets": 96,
+   "juz": 27
+  },
+  {
+   "rang": 61,
+   "sourate": 55,
+   "nom": "Ar-Rahmaan",
+   "nb_versets": 78,
+   "juz": 27
+  },
+  {
+   "rang": 62,
+   "sourate": 54,
+   "nom": "Al-Qamar",
+   "nb_versets": 55,
+   "juz": 27
+  },
+  {
+   "rang": 63,
+   "sourate": 53,
+   "nom": "An-Najm",
+   "nb_versets": 62,
+   "juz": 27
+  },
+  {
+   "rang": 64,
+   "sourate": 52,
+   "nom": "At-Tur",
+   "nb_versets": 49,
+   "juz": 27
+  },
+  {
+   "rang": 65,
+   "sourate": 51,
+   "nom": "Adh-Dhaariyat",
+   "nb_versets": 60,
+   "juz": 26
+  },
+  {
+   "rang": 66,
+   "sourate": 50,
+   "nom": "Qaaf",
+   "nb_versets": 45,
+   "juz": 26
+  },
+  {
+   "rang": 67,
+   "sourate": 49,
+   "nom": "Al-Hujuraat",
+   "nb_versets": 18,
+   "juz": 26
+  },
+  {
+   "rang": 68,
+   "sourate": 48,
+   "nom": "Al-Fath",
+   "nb_versets": 29,
+   "juz": 26
+  },
+  {
+   "rang": 69,
+   "sourate": 47,
+   "nom": "Muhammad",
+   "nb_versets": 38,
+   "juz": 26
+  },
+  {
+   "rang": 70,
+   "sourate": 46,
+   "nom": "Al-Ahqaf",
+   "nb_versets": 35,
+   "juz": 26
+  },
+  {
+   "rang": 71,
+   "sourate": 45,
+   "nom": "Al-Jaathiya",
+   "nb_versets": 37,
+   "juz": 25
+  },
+  {
+   "rang": 72,
+   "sourate": 44,
+   "nom": "Ad-Dukhaan",
+   "nb_versets": 59,
+   "juz": 25
+  },
+  {
+   "rang": 73,
+   "sourate": 43,
+   "nom": "Az-Zukhruf",
+   "nb_versets": 89,
+   "juz": 25
+  },
+  {
+   "rang": 74,
+   "sourate": 42,
+   "nom": "Ash-Shura",
+   "nb_versets": 53,
+   "juz": 25
+  },
+  {
+   "rang": 75,
+   "sourate": 41,
+   "nom": "Fussilat",
+   "nb_versets": 54,
+   "juz": 24
+  },
+  {
+   "rang": 76,
+   "sourate": 40,
+   "nom": "Ghafir",
+   "nb_versets": 85,
+   "juz": 24
+  },
+  {
+   "rang": 77,
+   "sourate": 39,
+   "nom": "Az-Zumar",
+   "nb_versets": 75,
+   "juz": 23
+  },
+  {
+   "rang": 78,
+   "sourate": 38,
+   "nom": "Saad",
+   "nb_versets": 88,
+   "juz": 23
+  },
+  {
+   "rang": 79,
+   "sourate": 37,
+   "nom": "As-Saaffaat",
+   "nb_versets": 182,
+   "juz": 23
+  },
+  {
+   "rang": 80,
+   "sourate": 36,
+   "nom": "Yaseen",
+   "nb_versets": 83,
+   "juz": 22
+  },
+  {
+   "rang": 81,
+   "sourate": 35,
+   "nom": "Faatir",
+   "nb_versets": 45,
+   "juz": 22
+  },
+  {
+   "rang": 82,
+   "sourate": 34,
+   "nom": "Saba",
+   "nb_versets": 54,
+   "juz": 22
+  },
+  {
+   "rang": 83,
+   "sourate": 33,
+   "nom": "Al-Ahzaab",
+   "nb_versets": 73,
+   "juz": 21
+  },
+  {
+   "rang": 84,
+   "sourate": 32,
+   "nom": "As-Sajda",
+   "nb_versets": 30,
+   "juz": 21
+  },
+  {
+   "rang": 85,
+   "sourate": 31,
+   "nom": "Luqman",
+   "nb_versets": 34,
+   "juz": 21
+  },
+  {
+   "rang": 86,
+   "sourate": 30,
+   "nom": "Ar-Room",
+   "nb_versets": 60,
+   "juz": 21
+  },
+  {
+   "rang": 87,
+   "sourate": 29,
+   "nom": "Al-Ankaboot",
+   "nb_versets": 69,
+   "juz": 20
+  },
+  {
+   "rang": 88,
+   "sourate": 28,
+   "nom": "Al-Qasas",
+   "nb_versets": 88,
+   "juz": 20
+  },
+  {
+   "rang": 89,
+   "sourate": 27,
+   "nom": "An-Naml",
+   "nb_versets": 93,
+   "juz": 19
+  },
+  {
+   "rang": 90,
+   "sourate": 26,
+   "nom": "Ash-Shu'araa",
+   "nb_versets": 227,
+   "juz": 19
+  },
+  {
+   "rang": 91,
+   "sourate": 25,
+   "nom": "Al-Furqaan",
+   "nb_versets": 77,
+   "juz": 18
+  },
+  {
+   "rang": 92,
+   "sourate": 24,
+   "nom": "An-Noor",
+   "nb_versets": 64,
+   "juz": 18
+  },
+  {
+   "rang": 93,
+   "sourate": 23,
+   "nom": "Al-Muminoon",
+   "nb_versets": 118,
+   "juz": 18
+  },
+  {
+   "rang": 94,
+   "sourate": 22,
+   "nom": "Al-Hajj",
+   "nb_versets": 78,
+   "juz": 17
+  },
+  {
+   "rang": 95,
+   "sourate": 21,
+   "nom": "Al-Anbiyaa",
+   "nb_versets": 112,
+   "juz": 17
+  },
+  {
+   "rang": 96,
+   "sourate": 20,
+   "nom": "Taa-Haa",
+   "nb_versets": 135,
+   "juz": 16
+  },
+  {
+   "rang": 97,
+   "sourate": 19,
+   "nom": "Maryam",
+   "nb_versets": 98,
+   "juz": 16
+  },
+  {
+   "rang": 98,
+   "sourate": 18,
+   "nom": "Al-Kahf",
+   "nb_versets": 110,
+   "juz": 15
+  },
+  {
+   "rang": 99,
+   "sourate": 17,
+   "nom": "Al-Israa",
+   "nb_versets": 111,
+   "juz": 15
+  },
+  {
+   "rang": 100,
+   "sourate": 16,
+   "nom": "An-Nahl",
+   "nb_versets": 128,
+   "juz": 14
+  },
+  {
+   "rang": 101,
+   "sourate": 15,
+   "nom": "Al-Hijr",
+   "nb_versets": 99,
+   "juz": 14
+  },
+  {
+   "rang": 102,
+   "sourate": 14,
+   "nom": "Ibrahim",
+   "nb_versets": 52,
+   "juz": 13
+  },
+  {
+   "rang": 103,
+   "sourate": 13,
+   "nom": "Ar-Ra'd",
+   "nb_versets": 43,
+   "juz": 13
+  },
+  {
+   "rang": 104,
+   "sourate": 12,
+   "nom": "Yusuf",
+   "nb_versets": 111,
+   "juz": 12
+  },
+  {
+   "rang": 105,
+   "sourate": 11,
+   "nom": "Hud",
+   "nb_versets": 123,
+   "juz": 11
+  },
+  {
+   "rang": 106,
+   "sourate": 10,
+   "nom": "Yunus",
+   "nb_versets": 109,
+   "juz": 11
+  },
+  {
+   "rang": 107,
+   "sourate": 9,
+   "nom": "At-Tawba",
+   "nb_versets": 129,
+   "juz": 10
+  },
+  {
+   "rang": 108,
+   "sourate": 8,
+   "nom": "Al-Anfaal",
+   "nb_versets": 75,
+   "juz": 9
+  },
+  {
+   "rang": 109,
+   "sourate": 7,
+   "nom": "Al-A'raaf",
+   "nb_versets": 206,
+   "juz": 8
+  },
+  {
+   "rang": 110,
+   "sourate": 6,
+   "nom": "Al-An'aam",
+   "nb_versets": 165,
+   "juz": 7
+  },
+  {
+   "rang": 111,
+   "sourate": 5,
+   "nom": "Al-Maaida",
+   "nb_versets": 120,
+   "juz": 6
+  },
+  {
+   "rang": 112,
+   "sourate": 4,
+   "nom": "An-Nisaa",
+   "nb_versets": 176,
+   "juz": 4
+  },
+  {
+   "rang": 113,
+   "sourate": 3,
+   "nom": "Aal-i-Imraan",
+   "nb_versets": 200,
+   "juz": 3
+  },
+  {
+   "rang": 114,
+   "sourate": 2,
+   "nom": "Al-Baqara",
+   "nb_versets": 286,
+   "juz": 1
+  }
+ ]
+}
