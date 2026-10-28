@@ -1,0 +1,13 @@
+{
+ "riwaya": "Hafs 'an 'Asim",
+ "statut": "NON VÉRIFIÉ depuis le serveur de préparation (accès réseau bloqué). Modèles d'adresse à tester dans l'appli, sur le téléphone, avant mise en service.",
+ "modele_url": "https://everyayah.com/data/{dossier}/{sourate:3}{verset:3}.mp3",
+ "exemple": "https://everyayah.com/data/Husary_128kbps/001001.mp3 = sourate 1, verset 1",
+ "recitateurs": [
+  {"id": "husary", "nom": "Mahmoud Khalil al-Husary (murattal)", "dossier": "Husary_128kbps", "usage": "apprentissage, débit lent et très clair"},
+  {"id": "husary_muallim", "nom": "Mahmoud Khalil al-Husary (mu'allim, avec pauses pour répéter)", "dossier": "Husary_Muallim_128kbps", "usage": "mémorisation par répétition"},
+  {"id": "minshawi", "nom": "Muhammad Siddiq al-Minshawi (murattal)", "dossier": "Minshawy_Murattal_128kbps", "usage": "apprentissage"},
+  {"id": "abdulbasit", "nom": "Abdul Basit Abdus Samad (murattal)", "dossier": "Abdul_Basit_Murattal_192kbps", "usage": "écoute"},
+  {"id": "alafasy", "nom": "Mishary Rashid al-Afasy", "dossier": "Alafasy_128kbps", "usage": "écoute"}
+ ]
+}
