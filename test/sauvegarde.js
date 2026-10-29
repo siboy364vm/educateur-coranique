@@ -31,7 +31,7 @@ const srv = http.createServer((q, r) => {
   await A.fill('#newname', 'Amina'); await A.fill('#newage', '10'); await A.click('text=Ajouter');
   await A.click('.who button:has-text("Amina")');
   await A.click('.tab:has-text("Hadith")'); await A.click('text=J\'ai lu le hadith');
-  await A.evaluate(() => { state.memo[cur] = { 1: { validated: true, box: 1, due: Date.now() + 86400000, validatedAt: 1000 } }; state.lessons[cur] = { 1: 2 }; save(); });
+  await A.evaluate(() => { state.memo[cur] = { 1: { validated: true, box: 1, due: Date.now() + 86400000, validatedAt: 1000 } }; state.vdone[cur] = { 1: 7 }; save(); });
   const fa = await exportFrom(A, 'a.json');
   ok(JSON.parse(fs.readFileSync(fa)).format === 'educateur-coranique', 'fichier exporté au bon format');
   ok((await A.textContent('#app')).includes('Dernière sauvegarde'), 'date de dernière sauvegarde affichée');
@@ -43,7 +43,7 @@ const srv = http.createServer((q, r) => {
   await B.click('.who button:has-text("Amina")');
   ok(await B.evaluate(() => isValid(1) && lessonsDone(1) === 2 && xpTotal(cur) === 5), 'B a retrouvé validation, leçons et XP de A');
   // B progresse, puis A importe la sauvegarde de B
-  await B.evaluate(() => { state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'lesson', surah: 114, lesson: 1, score: 100, xp: 15, minutes: 2 }); state.lessons[cur][114] = 1; save(); });
+  await B.evaluate(() => { state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'lesson', surah: 114, lesson: 1, score: 100, xp: 15, minutes: 2 }); state.vdone[cur][114] = 5; save(); });
   const fb = await exportFrom(B, 'b.json');
   await A.setInputFiles('.file-btn input', fb);
   await A.waitForTimeout(300);

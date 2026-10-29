@@ -1,10 +1,14 @@
 'use strict';
 const INTERVALS = [1, 3, 7, 14, 30];
-const PASS = 0.8;
 const KEY = 'ec.v1';
 const DAY = 86400000;
-const CHUNK = 5;      // versets par leçon
-const MAX_EX = 10;    // exercices par leçon
+// Niveaux : versets par leçon, exercices par leçon, questions du vérificateur, seuil, verset visible pendant la récitation
+const LEVELS = {
+  debutant: { nom: 'Débutant', chunk: 3, maxEx: 6, quizN: 6, pass: 0.8, voir: true },
+  standard: { nom: 'Standard', chunk: 5, maxEx: 10, quizN: 10, pass: 0.8, voir: false },
+  avance: { nom: 'Avancé', chunk: 7, maxEx: 14, quizN: 15, pass: 0.9, voir: false },
+};
+const CUSTOM = { chunk: [1, 10], maxEx: [4, 20], quizN: [5, 20], pass: [0.6, 1] };
 const XP = { lesson: 10, perfect: 5, practice: 5, quizPass: 20, quizTry: 5, hadith: 5, recite: 10 };
 const GOALS = [[10, 'Détendu'], [20, 'Normal'], [30, 'Sérieux'], [50, 'Intense']];
 const COLORS = [['#58cc02', '#58a700'], ['#ce82ff', '#a568cc'], ['#1cb0f6', '#1899d6'], ['#ff9600', '#e08600'], ['#ff86d0', '#e070b5'], ['#2bc4a6', '#1fa088']];
@@ -21,7 +25,13 @@ function load() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
   s = s || { profiles: [], log: [], memo: {}, pin: null };
-  s.lessons = s.lessons || {}; s.prefs = s.prefs || {};
+  s.prefs = s.prefs || {};
+  if (!s.vdone) {
+    // Ancien format : nombre de leçons de 5 versets, converti en versets couverts
+    s.vdone = {};
+    for (const [pid, m] of Object.entries(s.lessons || {})) s.vdone[pid] = Object.fromEntries(Object.entries(m).map(([n, x]) => [n, x * 5]));
+  }
+  delete s.lessons;
   return s;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -84,6 +94,7 @@ const I = {
   home: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="${c}" d="M12 2.5l9.5 8.2V21a1 1 0 0 1-1 1H15v-6.5H9V22H3.5a1 1 0 0 1-1-1V10.7z"/></svg>`,
   chart: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><g fill="${c}"><rect x="3" y="12" width="5" height="9" rx="1.5"/><rect x="9.5" y="6" width="5" height="15" rx="1.5"/><rect x="16" y="2.5" width="5" height="18.5" rx="1.5"/></g></svg>`,
   shield: (s = 22, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="${c}" d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z"/></svg>`,
+  search: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="${c}" stroke-width="3" fill="none"/><path d="M15.5 15.5L21 21" stroke="${c}" stroke-width="3.2" stroke-linecap="round"/></svg>`,
   back: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   ring: (pct, s = 26) => { const r = 9, c = 2 * Math.PI * r; return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="${r}" stroke="var(--line)" stroke-width="4" fill="none"/><circle cx="12" cy="12" r="${r}" stroke="var(--blue)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="${c * Math.min(1, pct)} ${c}" transform="rotate(-90 12 12)"/></svg>`; },
 };
@@ -96,7 +107,7 @@ async function boot() {
     data = { surahs: list.map(x => ({ number: x.numero, name_ar: x.nom_arabe, name_fr: x.nom_translit, count: x.nb_versets, juz: x.juz_debut })), ordre: ordre.ordre_sourates, hadiths: hq.hadiths, audio: null };
   } catch (e) { $('app').innerHTML = '<div class="wrap"><p class="bad">Données introuvables.</p></div>'; return; }
   try { data.audio = await getJSON('data/coran/audio.json'); } catch (e) {}
-  data.units = data.ordre.map((n, i) => { const s = data.surahs.find(x => x.number === n); return { rank: i + 1, s, lessons: Math.ceil(s.count / CHUNK) }; });
+  data.units = data.ordre.map((n, i) => { const s = data.surahs.find(x => x.number === n); return { rank: i + 1, s }; });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
   cur = localStorage.getItem('ec.cur');
   if (!state.profiles.find(p => p.id === cur)) cur = null;
@@ -107,8 +118,12 @@ async function boot() {
 /* Profil courant et calculs de progression */
 const me = () => state.profiles.find(p => p.id === cur);
 const memo = () => (state.memo[cur] = state.memo[cur] || {});
-const prefs = () => (state.prefs[cur] = Object.assign({ fr: true, uthmani: false, reciter: 'husary', goal: 20, voice: false }, state.prefs[cur]));
-const lessonsDone = n => (state.lessons[cur] || {})[n] || 0;
+const prefs = () => (state.prefs[cur] = Object.assign({ fr: true, uthmani: false, reciter: 'husary', goal: 20, voice: false, level: 'standard', reminder: '18:00' }, state.prefs[cur]));
+const lv = () => { const p = prefs(); return p.level === 'perso' ? Object.assign({}, LEVELS.standard, p.custom, { nom: 'Personnalisé' }) : LEVELS[p.level] || LEVELS.standard; };
+const countOf = n => data.surahs.find(x => x.number === n).count;
+const nLessons = n => Math.ceil(countOf(n) / lv().chunk);
+const vdone = n => Math.min(countOf(n), (state.vdone[cur] || {})[n] || 0);
+const lessonsDone = n => vdone(n) >= countOf(n) ? nLessons(n) : Math.floor(vdone(n) / lv().chunk);
 const isValid = n => !!(memo()[n] && memo()[n].validated);
 const voiceOn = () => !!(SR && prefs().voice);
 const isDue = n => isValid(n) && memo()[n].due <= Date.now();
@@ -133,7 +148,7 @@ function route() { L = null; cur ? render() : profiles(); }
 function go(t) { tab = t; shown = 0; render(); window.scrollTo(0, 0); }
 function render() {
   L = null;
-  const views = { learn: viewLearn, review: viewReview, hadith: viewHadith, me: viewMe };
+  const views = { learn: viewLearn, review: viewReview, hadith: viewHadith, search: viewSearch, me: viewMe };
   shell((views[tab] || viewLearn)());
   if (tab === 'learn') { const c = document.querySelector('.node.cur'); if (c && !shown) c.scrollIntoView({ block: 'center' }); }
 }
@@ -150,7 +165,7 @@ function shell(inner) {
     </div></div>
     <div class="wrap">${inner}</div>
     <nav class="tabs"><div class="in">
-      ${t('learn', I.home(), 'Apprendre')}${t('review', I.refresh(26), 'Réviser', due)}${t('hadith', I.book(26), 'Hadith')}${t('me', I.chart(), 'Profil')}
+      ${t('learn', I.home(), 'Apprendre')}${t('review', I.refresh(26), 'Réviser', due)}${t('hadith', I.book(26), 'Hadith')}${t('search', I.search(), 'Chercher')}${t('me', I.chart(), 'Profil')}
     </div></nav>`;
 }
 
@@ -170,7 +185,9 @@ function profiles() {
 function addProfile() {
   const n = $('newname').value.trim(), age = parseInt($('newage').value, 10);
   if (!n || !(age > 0)) { toast('Indique un prénom et un âge.'); return; }
-  state.profiles.push({ id: uid(), name: n, age, createdAt: Date.now() });
+  const id = uid();
+  state.profiles.push({ id, name: n, age, createdAt: Date.now() });
+  state.prefs[id] = { level: age < 10 ? 'debutant' : 'standard' };
   save(); profiles();
 }
 function pickProfile(id) { cur = id; localStorage.setItem('ec.cur', id); tab = 'learn'; route(); }
@@ -192,32 +209,32 @@ function viewLearn() {
 }
 function unitHtml(u, ui, ci) {
   const [c, cd] = COLORS[ui % COLORS.length], n = u.s.number, valid = isValid(n), lockedUnit = ui > ci;
-  const ld = valid ? u.lessons : lessonsDone(n);
+  const nl = nLessons(n), ch = lv().chunk, ld = valid ? nl : lessonsDone(n);
   let z = 0, nodes = '';
-  for (let i = 0; i < u.lessons; i++) {
-    const a = i * CHUNK + 1, b = Math.min(u.s.count, a + CHUNK - 1);
+  for (let i = 0; i < nl; i++) {
+    const a = i * ch + 1, b = Math.min(u.s.count, a + ch - 1);
     const st = i < ld ? 'done' : (ui === ci && i === ld ? 'cur' : 'lock');
     nodes += `<button class="node ${st}" style="--x:${ZIG[z++ % ZIG.length]}px;--c:${c};--cd:${cd}" onclick="openLesson(${ui},${i})" aria-label="Leçon ${i + 1}, versets ${a} à ${b}">
       ${st === 'cur' ? '<span class="bubble">Commencer</span>' : ''}${st === 'done' ? I.check(34, '#fff') : I.star(34, st === 'lock' ? '#afafaf' : '#fff')}</button>`;
   }
-  const chk = valid ? (isDue(n) ? 'due' : 'done') : (ui === ci && ld >= u.lessons ? 'cur' : 'lock');
+  const chk = valid ? (isDue(n) ? 'due' : 'done') : (ui === ci && ld >= nl ? 'cur' : 'lock');
   nodes += `<button class="node chk ${chk}" style="--x:${ZIG[z % ZIG.length]}px;--c:${c};--cd:${cd}" onclick="openCheck(${ui})" aria-label="Vérificateur de la sourate">
     ${chk === 'cur' ? '<span class="bubble">Vérificateur</span>' : ''}${chk === 'due' ? I.refresh(36, '#fff') : I.trophy(36, chk === 'lock' ? '#afafaf' : '#fff')}</button>`;
   return `<div class="unit" style="background:${lockedUnit ? 'var(--lock-d)' : c}">
       <div class="row"><div><div class="k">Étape ${u.rank} · Juz ${u.s.juz}</div><div class="t">${esc(u.s.name_fr)}</div></div><div class="ar">${esc(u.s.name_ar)}</div></div>
-      <div class="k" style="text-transform:none;letter-spacing:0">${u.s.count} versets · ${u.lessons} leçon(s) · ${valid ? 'validée' : ld + ' leçon(s) faite(s)'}</div>
+      <div class="k" style="text-transform:none;letter-spacing:0">${u.s.count} versets · ${nl} leçon(s) · ${valid ? 'validée' : ld + ' leçon(s) faite(s)'}</div>
       <div class="acts"><button class="chip" onclick="readSurah(${n})">${I.book(16, '#fff')}Lire</button>${valid ? '' : `<button class="chip" onclick="startQuiz(${n})">${I.trophy(16, '#fff')}Passer le test</button>`}${voiceOn() ? `<button class="chip" onclick="startRecite(${n})">${I.mic(16, '#fff')}Réciter</button>` : ''}</div>
     </div><div class="path">${nodes}</div>`;
 }
 function openLesson(ui, i) {
   const u = data.units[ui], { ci } = pathState(), n = u.s.number;
-  const ld = isValid(n) ? u.lessons : lessonsDone(n);
+  const ld = isValid(n) ? nLessons(n) : lessonsDone(n);
   if (i < ld || (ui === ci && i === ld)) startLesson(n, i);
   else toast('Leçon verrouillée. Termine d\'abord les précédentes ou passe le test de l\'étape.');
 }
 function openCheck(ui) {
   const u = data.units[ui], { ci } = pathState(), n = u.s.number;
-  if (isValid(n) || (ui === ci && lessonsDone(n) >= u.lessons)) startQuiz(n);
+  if (isValid(n) || (ui === ci && lessonsDone(n) >= nLessons(n))) startQuiz(n);
   else toast('Termine les leçons de cette étape, ou utilise « Passer le test » pour avancer.');
 }
 
@@ -257,16 +274,16 @@ async function loadPool(n) {
 async function startLesson(n, idx) {
   let v, pool;
   try { ({ v, pool } = await loadPool(n)); } catch (e) { toast('Sourate introuvable.'); return; }
-  const chunk = v.slice(idx * CHUNK, idx * CHUNK + CHUNK), steps = [], rest = [];
+  const { chunk: ch, maxEx } = lv(), chunk = v.slice(idx * ch, idx * ch + ch), steps = [], rest = [];
   chunk.forEach((a, j) => {
     steps.push({ t: 'learn', v: a }, blankEx(a, pool));
     const o = orderEx(a); if (o) rest.push(o);
-    const prev = j ? chunk[j - 1] : v[idx * CHUNK - 1];
+    const prev = j ? chunk[j - 1] : v[idx * ch - 1];
     if (prev) { const e = nextEx(prev, a, v); if (e) rest.push(e); }
   });
-  const room = Math.max(0, MAX_EX - chunk.length);
+  const room = Math.max(0, maxEx - chunk.length);
   steps.push(...shuffle(rest).slice(0, room));
-  if (voiceOn()) chunk.forEach((a, j) => steps.push(reciteEx(a, j ? chunk[j - 1] : v[idx * CHUNK - 1])));
+  if (voiceOn()) chunk.forEach((a, j) => steps.push(reciteEx(a, j ? chunk[j - 1] : v[idx * ch - 1])));
   const total = steps.filter(s => s.t !== 'learn').length;
   L = { kind: 'lesson', n, idx, steps, k: 0, ok: 0, total, retried: new Set(), start: Date.now(), practice: isValid(n) || idx < lessonsDone(n) };
   renderStep();
@@ -281,11 +298,11 @@ async function startRecite(n) {
   L = { kind: 'recite', n, steps, k: 0, ok: 0, total: steps.length, retried: new Set(), start: Date.now() };
   renderStep();
 }
-// Vérificateur : 10 versets tirés au hasard, mot manquant à retrouver, seuil 80 %
+// Vérificateur : versets tirés au hasard (10 au niveau standard), mot manquant à retrouver, seuil du niveau
 async function startQuiz(n) {
   let v, pool;
   try { ({ v, pool } = await loadPool(n)); } catch (e) { toast('Sourate introuvable.'); return; }
-  const steps = shuffle(v).slice(0, 10).map(a => blankEx(a, pool));
+  const steps = shuffle(v).slice(0, lv().quizN).map(a => blankEx(a, pool));
   L = { kind: 'quiz', n, steps, k: 0, ok: 0, total: steps.length, retried: new Set(), start: Date.now() };
   renderStep();
 }
@@ -327,7 +344,7 @@ function stepBody(st) {
 }
 const peekHtml = () => `<div class="ar">${esc(vtext(L.steps[L.k].v))}</div>`;
 function renderStep() {
-  micStop(); const st = L.steps[L.k]; L.sel = null; L.checked = false; L.order = []; L.heard = null; L.peek = false;
+  micStop(); const st = L.steps[L.k]; L.sel = null; L.checked = false; L.order = []; L.heard = null; L.peek = lv().voir;
   const pct = Math.round(100 * L.k / L.steps.length);
   $('app').innerHTML = `<div class="lesson">
     <div class="lhead"><button class="x" onclick="quitLesson()" aria-label="Quitter">${I.x()}</button><div class="prog"><i style="width:${pct}%"></i></div></div>
@@ -356,7 +373,7 @@ const PRAISE = ['Excellent !', 'Bravo !', 'Très bien !', 'Parfait !', 'Bien jou
 function checkStep() {
   const st = L.steps[L.k]; if (L.checked) return;
   let given, rec;
-  if (st.t === 'recite') { if (!L.heard) return; micStop(); rec = L.heard.map(h => compareRecitation(st.answer, h)).sort((a, b) => b.score - a.score)[0]; given = rec.score >= PASS ? st.answer : ''; }
+  if (st.t === 'recite') { if (!L.heard) return; micStop(); rec = L.heard.map(h => compareRecitation(st.answer, h)).sort((a, b) => b.score - a.score)[0]; given = rec.score >= lv().pass ? st.answer : ''; }
   else if (st.t === 'order') given = L.order.map(bi => st.frag[st.bank[bi]].n).join(' ');
   else { if (L.sel === null) return; given = st.opts[L.sel].key; }
   const good = given === st.answer;
@@ -438,16 +455,16 @@ function finish() {
   let xp, title, msg = '', pass = true;
   if (L.kind === 'lesson') {
     xp = L.practice ? XP.practice : XP.lesson + (acc === 1 ? XP.perfect : 0);
-    if (!L.practice) { (state.lessons[cur] = state.lessons[cur] || {})[n] = Math.max(lessonsDone(n), L.idx + 1); }
+    if (!L.practice) { const d = state.vdone[cur] = state.vdone[cur] || {}; d[n] = Math.max(vdone(n), Math.min(countOf(n), (L.idx + 1) * lv().chunk)); }
     state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'lesson', surah: n, lesson: L.idx + 1, score: Math.round(acc * 100), xp, minutes: mins });
     title = L.practice ? 'Entraînement terminé !' : 'Leçon terminée !';
   } else if (L.kind === 'recite') {
-    xp = acc >= PASS ? XP.recite : XP.practice;
+    xp = acc >= lv().pass ? XP.recite : XP.practice;
     state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'recite', surah: n, score: Math.round(acc * 100), xp, minutes: mins });
     title = 'Récitation terminée !';
     msg = 'Seuls les mots sont vérifiés, pas le tajwid. Fais aussi écouter ta récitation à un enseignant.';
   } else {
-    const score = acc; pass = score >= PASS;
+    const score = acc; pass = score >= lv().pass;
     const m = memo(); const e = m[n] = m[n] || { validated: false, box: 0, due: 0 };
     if (pass) { e.validated = true; e.box = Math.min(e.box + 1, INTERVALS.length); e.validatedAt = e.validatedAt || Date.now(); }
     else e.box = 1;
@@ -455,7 +472,7 @@ function finish() {
     xp = pass ? XP.quizPass : XP.quizTry;
     state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'quiz', surah: n, score: Math.round(score * 100), pass, xp, minutes: mins });
     title = pass ? 'Sourate validée !' : 'Pas encore validée';
-    msg = pass ? `Prochaine révision dans ${INTERVALS[e.box - 1]} jour(s).` : `Seuil de ${PASS * 100} % non atteint. Relis la sourate et recommence demain.`;
+    msg = pass ? `Prochaine révision dans ${INTERVALS[e.box - 1]} jour(s).` : `Seuil de ${Math.round(lv().pass * 100)} % non atteint. Relis la sourate et recommence demain.`;
   }
   save();
   const s = data.surahs.find(x => x.number === n), st = streak(cur), reached = before < goal && before + xp >= goal;
@@ -471,7 +488,7 @@ function finish() {
 
 /* Lecture d'une sourate complète */
 let readStart = 0;
-async function readSurah(n) {
+async function readSurah(n, at) {
   const s = data.surahs.find(x => x.number === n), pr = prefs();
   let v;
   try { v = (await getJSON(surahFile(n))).versets; } catch (e) { toast('Sourate introuvable.'); return; }
@@ -481,10 +498,11 @@ async function readSurah(n) {
     <div class="lbody" style="padding-bottom:120px">
       <label class="switch"><input type="checkbox" ${pr.fr ? 'checked' : ''} onchange="prefs().fr=this.checked;save();readSurah(${n})"> Traduction</label>
       <label class="switch"><input type="checkbox" ${pr.uthmani ? 'checked' : ''} onchange="prefs().uthmani=this.checked;save();readSurah(${n})"> Texte uthmani (police Coran conseillée)</label>
-      ${v.map(a => `<div class="item" style="display:block"><div class="row"><span class="vnum">${a.n}</span><button class="link" onclick="playVerse(${n},${a.n})" aria-label="Écouter le verset ${a.n}">${I.sound(22)}</button></div>
+      ${v.map(a => `<div class="item" id="v${a.n}" style="display:block"><div class="row"><span class="vnum">${a.n}</span><button class="link" onclick="playVerse(${n},${a.n})" aria-label="Écouter le verset ${a.n}">${I.sound(22)}</button></div>
         <div class="ar">${esc(vtext(a))}</div>${pr.fr ? `<div class="muted">${esc(a.fr)}</div>` : ''}</div>`).join('')}
       <p class="src">${esc(SOURCE_CORAN)}</p></div>
     <div class="lfoot"><div class="in"><button class="btn" onclick="endRead(${n})">Terminer la lecture</button></div></div></div>`;
+  if (at && $('v' + at)) $('v' + at).scrollIntoView({ block: 'center' });
 }
 function endRead(n) {
   const mins = Math.max(1, Math.round((Date.now() - readStart) / 60000));
@@ -530,10 +548,42 @@ function readHadith() {
   save(); render(); toast(`+${XP.hadith} XP`);
 }
 
+/* Onglet Chercher : recherche dans les textes vérifiés de l'appli, sans réponse générée */
+let lastQ = '';
+const fold = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, ' ');
+function viewSearch() {
+  setTimeout(() => { if (lastQ) doSearch(); }, 0);
+  return `<h2>Chercher</h2>
+    <p class="muted">Cherche un mot dans le Coran (traduction ou texte arabe) et dans les hadiths de l'appli. Les résultats sont les textes eux-mêmes avec leur source, rien n'est rédigé ni résumé. Pour une question de pratique, se référer à un savant malékite.</p>
+    <form class="search" onsubmit="event.preventDefault();lastQ=$('q').value;doSearch()"><input id="q" type="search" placeholder="ex. patience, الصبر, parents" value="${esc(lastQ)}" autocomplete="off"><button class="btn" type="submit">Chercher</button></form>
+    <div id="res"></div>`;
+}
+async function doSearch() {
+  const q = lastQ.trim(), res = $('res'); if (!res) return;
+  const ar = /[\u0600-\u06FF]/.test(q);
+  const terms = ar ? arNorm(q) : fold(q).split(/[^a-z0-9]+/).filter(w => w.length > 1);
+  if (!terms.length || q.length < 2) { res.innerHTML = '<p class="muted">Écris au moins un mot de deux lettres.</p>'; return; }
+  res.innerHTML = '<p class="muted">Recherche…</p>';
+  let idx;
+  try { idx = await getJSON('data/coran/recherche.json'); } catch (e) { res.innerHTML = '<p class="bad">Index de recherche introuvable (connexion ?).</p>'; return; }
+  if (!idx.folded) idx.folded = idx.versets.map(x => fold(x[2]));
+  const hit = (txt, normAr) => terms.every(t => ar ? normAr.includes(t) : txt.includes(t));
+  const vs = idx.versets.filter((x, i) => hit(idx.folded[i], x[3]));
+  const kid = (me() || {}).age < 14;
+  const hs = data.hadiths.filter(h => !(kid && h.accompagnement) && hit(fold(h.fr), arNorm(h.ar).join(' ')));
+  const nameOf = n => data.surahs.find(x => x.number === n).name_fr;
+  const shorten = t => t.length > 320 ? t.slice(0, 320) + ' …' : t;
+  if (lastQ.trim() !== q) return;
+  res.innerHTML = `<p class="muted">${vs.length} verset(s), ${hs.length} hadith(s).</p>
+    ${vs.length ? `<div class="card"><h3>Coran</h3>${vs.slice(0, 30).map(x => `<div class="item" style="display:block"><div class="row"><b>${esc(nameOf(x[0]))} ${x[0]}:${x[1]}</b><button class="link" onclick="readSurah(${x[0]},${x[1]})">Lire</button></div><div>${esc(x[2])}</div></div>`).join('')}
+      ${vs.length > 30 ? '<p class="muted small">Seuls les 30 premiers versets sont affichés. Ajoute un mot pour préciser.</p>' : ''}<p class="src">${esc(SOURCE_CORAN)}</p></div>` : ''}
+    ${hs.length ? `<div class="card"><h3>Hadiths</h3>${hs.slice(0, 20).map(h => `<div class="item" style="display:block"><div>${esc(shorten(h.fr))}</div><p class="src">${esc(h.recueil)}, n° ${esc(h.numero)} · grade : ${esc(h.grade.valeur)}${h.grade.par ? ' (' + esc(h.grade.par) + ')' : ''}</p></div>`).join('')}</div>` : ''}`;
+}
+
 /* Onglet Profil */
 function viewMe() {
   const p = me(), pr = prefs(), done = data.surahs.filter(s => isValid(s.number)).length;
-  const lessons = Object.values(state.lessons[cur] || {}).reduce((t, x) => t + x, 0);
+  const lessons = mine(cur).filter(l => l.type === 'lesson').length;
   const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
   const xs = days.map(d => xpOn(cur, dayKey(d))), max = Math.max(pr.goal, ...xs);
   const stat = (ico, v, l) => `<div class="tile-stat">${ico}<div><b>${v}</b><span class="muted">${l}</span></div></div>`;
@@ -544,6 +594,7 @@ function viewMe() {
     <div class="card"><h3>7 derniers jours</h3><div class="week">${xs.map((x, i) => `<div class="d"><span>${x}</span><div class="b ${x >= pr.goal ? 'hit' : ''}" style="height:${Math.round(70 * x / max)}%"></div><span>${days[i].toLocaleDateString('fr-FR', { weekday: 'narrow' })}</span></div>`).join('')}</div></div>
     <div class="card"><h3>Objectif quotidien</h3><div class="goals">${GOALS.map(([g, l]) => `<button class="goal-opt ${pr.goal === g ? 'on' : ''}" onclick="prefs().goal=${g};save();render()"><span>${l}</span><span>${g} XP par jour</span></button>`).join('')}</div>
       <p class="muted" style="margin-top:10px">Une leçon rapporte ${XP.lesson} XP (+${XP.perfect} sans faute), un vérificateur réussi ${XP.quizPass} XP, le hadith du jour ${XP.hadith} XP.</p></div>
+    ${levelCard()}${reminderCard()}
     <div class="card"><h3>Réglages</h3>
       <label class="switch"><input type="checkbox" ${pr.fr ? 'checked' : ''} onchange="prefs().fr=this.checked;save()"> Afficher la traduction</label>
       <label class="switch"><input type="checkbox" ${pr.uthmani ? 'checked' : ''} onchange="prefs().uthmani=this.checked;save()"> Texte uthmani</label>
@@ -555,6 +606,62 @@ function viewMe() {
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
     <button class="btn ghost" onclick="switchProfile()">Changer de profil</button>
     <p class="src">${esc(SOURCE_CORAN)}</p>`;
+}
+
+/* Niveau du profil */
+function setLevel(l) {
+  const p = prefs(); p.level = l;
+  if (l === 'perso') p.custom = cleanCustom(p.custom || LEVELS.standard);
+  save(); render();
+}
+function setCustom(k, v) { const p = prefs(); p.custom = cleanCustom(Object.assign({}, p.custom, { [k]: v })); save(); render(); }
+function levelCard() {
+  const p = prefs(), c = lv();
+  const desc = x => `${x.chunk} verset(s) par leçon, ${x.maxEx} exercices au plus, vérificateur de ${x.quizN} questions, seuil ${Math.round(x.pass * 100)} %${x.voir ? ', verset visible pendant la récitation' : ''}`;
+  const sel = (k, vals, f) => `<select onchange="setCustom('${k}',+this.value)">${vals.map(v => `<option value="${v}" ${c[k] === v ? 'selected' : ''}>${f(v)}</option>`).join('')}</select>`;
+  const range = (a, b, st = 1) => { const r = []; for (let x = a; x <= b + 1e-9; x += st) r.push(Math.round(x * 100) / 100); return r; };
+  return `<div class="card"><h3>Niveau</h3><div class="goals">
+    ${Object.entries(LEVELS).map(([k, x]) => `<button class="goal-opt ${p.level === k ? 'on' : ''}" onclick="setLevel('${k}')"><span>${x.nom}</span><span class="muted small" style="text-align:right;max-width:60%">${x.chunk} versets par leçon · seuil ${Math.round(x.pass * 100)} %</span></button>`).join('')}
+    <button class="goal-opt ${p.level === 'perso' ? 'on' : ''}" onclick="setLevel('perso')"><span>Personnalisé</span><span class="muted small">à régler</span></button></div>
+    ${p.level === 'perso' ? `<div class="form custom">
+      <label>Versets par leçon ${sel('chunk', range(1, 10), v => v)}</label>
+      <label>Exercices par leçon (au plus) ${sel('maxEx', range(4, 20, 2), v => v)}</label>
+      <label>Questions du vérificateur ${sel('quizN', range(5, 20, 5), v => v)}</label>
+      <label>Seuil de réussite ${sel('pass', range(0.6, 1, 0.05), v => Math.round(v * 100) + ' %')}</label>
+      <label class="switch"><input type="checkbox" ${c.voir ? 'checked' : ''} onchange="setCustom('voir',this.checked)"> Verset visible pendant la récitation</label></div>` : ''}
+    <p class="muted small" style="margin-top:10px">${esc(desc(c))}. Changer de niveau garde les versets déjà appris.</p></div>`;
+}
+
+/* Rappel quotidien : ajouté à l'agenda du téléphone, qui se charge de la notification (aucun serveur) */
+const appUrl = () => location.origin + location.pathname;
+function reminderStart() {
+  const [h, m] = prefs().reminder.split(':').map(Number), d = new Date();
+  d.setHours(h, m, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1);
+  return d;
+}
+// Heure locale « flottante » : l'agenda l'applique dans le fuseau du téléphone
+const icsTime = d => { const f = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${f(d.getMonth() + 1)}${f(d.getDate())}T${f(d.getHours())}${f(d.getMinutes())}00`; };
+const REM_TITLE = 'Éducateur coranique : leçon du jour';
+function icsReminder() {
+  const now = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Educateur coranique//FR', 'BEGIN:VEVENT', `UID:rappel-${cur}@educateur-coranique`, `DTSTAMP:${now}`,
+    `DTSTART:${icsTime(reminderStart())}`, 'DURATION:PT15M', 'RRULE:FREQ=DAILY', `SUMMARY:${REM_TITLE}`, `DESCRIPTION:${appUrl()}`, `URL:${appUrl()}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', `DESCRIPTION:${REM_TITLE}`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' })); a.download = 'rappel-educateur-coranique.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function googleReminder() {
+  const st = reminderStart(), end = new Date(st.getTime() + 15 * 60000);
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: REM_TITLE, details: appUrl(), dates: icsTime(st) + '/' + icsTime(end), recur: 'RRULE:FREQ=DAILY' });
+  window.open('https://calendar.google.com/calendar/render?' + q, '_blank');
+}
+function reminderCard() {
+  return `<div class="card"><h3>Rappel quotidien</h3>
+    <p class="muted">L'appli ne peut pas envoyer de notification quand elle est fermée sans serveur. Le rappel est donc ajouté à l'agenda du téléphone, qui sonnera chaque jour.</p>
+    <label class="muted">Heure <input type="time" value="${esc(prefs().reminder)}" onchange="if(this.value){prefs().reminder=this.value;save()}"></label>
+    <button class="btn blue" style="margin-top:12px" onclick="icsReminder()">Ajouter à l'agenda (iPhone, Samsung, Outlook)</button>
+    <button class="btn ghost" onclick="googleReminder()">Ajouter à Google Agenda</button></div>`;
 }
 
 /* Sauvegarde : un fichier à transférer d'un appareil à l'autre, fusionné à l'import */
@@ -595,10 +702,17 @@ function cleanBackup(d) {
   return {
     profiles, log,
     memo: perProfile(d.memo, m => bySurah(m, e => ({ validated: !!(e && e.validated), box: num(e && e.box), due: num(e && e.due), ...(e && e.validatedAt ? { validatedAt: num(e.validatedAt) } : {}) }))),
-    lessons: perProfile(d.lessons, m => bySurah(m, x => num(x))),
-    prefs: perProfile(d.prefs, p => ({ fr: p.fr !== false, uthmani: !!p.uthmani, voice: !!p.voice, reciter: typeof p.reciter === 'string' ? p.reciter.slice(0, 30) : 'husary', goal: GOALS.some(([g]) => g === p.goal) ? p.goal : 20 })),
+    vdone: perProfile(d.vdone || Object.fromEntries(Object.entries(d.lessons || {}).map(([pid, m]) => [pid, Object.fromEntries(Object.entries(m || {}).map(([n, x]) => [n, num(x) * 5]))])), m => bySurah(m, x => num(x))),
+    prefs: perProfile(d.prefs, p => ({ fr: p.fr !== false, uthmani: !!p.uthmani, voice: !!p.voice, reciter: typeof p.reciter === 'string' ? p.reciter.slice(0, 30) : 'husary', goal: GOALS.some(([g]) => g === p.goal) ? p.goal : 20,
+      level: LEVELS[p.level] || p.level === 'perso' ? p.level : 'standard', custom: cleanCustom(p.custom), reminder: /^\d\d:\d\d$/.test(p.reminder) ? p.reminder : '18:00' })),
     pin: typeof d.pin === 'string' && /^[0-9a-f]{64}$/.test(d.pin) ? d.pin : null,
   };
+}
+function cleanCustom(c) {
+  const o = {};
+  for (const [k, [lo, hi]] of Object.entries(CUSTOM)) o[k] = Math.min(hi, Math.max(lo, num(c && c[k], LEVELS.standard[k])));
+  o.voir = !!(c && c.voir);
+  return o;
 }
 // Fusion : rien n'est effacé, chaque activité n'est comptée qu'une fois, la progression la plus avancée l'emporte
 function mergeState(a, b) {
@@ -616,8 +730,8 @@ function mergeState(a, b) {
       if (at.length) o[n].validatedAt = Math.min(...at);
     }
   }
-  for (const [pid, m] of Object.entries(b.lessons)) {
-    const o = out.lessons[pid] = out.lessons[pid] || {};
+  for (const [pid, m] of Object.entries(b.vdone)) {
+    const o = out.vdone[pid] = out.vdone[pid] || {};
     for (const [n, x] of Object.entries(m)) o[n] = Math.max(o[n] || 0, x);
   }
   for (const [pid, p] of Object.entries(b.prefs)) if (!out.prefs[pid]) out.prefs[pid] = p;

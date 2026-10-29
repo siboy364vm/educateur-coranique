@@ -170,3 +170,11 @@ input:focus,select:focus{border-color:var(--blue)}
 /* Sauvegarde */
 .file-btn{display:block;text-align:center;position:relative;margin-top:12px}
 .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+
+/* Niveau, rappel, recherche */
+.custom{margin-top:12px}
+.custom label{display:grid;gap:6px;font-weight:700;color:var(--muted);font-size:14px}
+input[type=time]{margin-top:6px}
+.search{display:flex;gap:10px;margin:8px 0 16px}
+.search .btn{width:auto}
+.tab{font-size:10px}
