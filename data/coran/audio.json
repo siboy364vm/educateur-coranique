@@ -1,13 +1,65 @@
 {
  "riwaya": "Hafs 'an 'Asim",
- "statut": "NON VÉRIFIÉ depuis le serveur de préparation (accès réseau bloqué). Modèles d'adresse à tester dans l'appli, sur le téléphone, avant mise en service.",
+ "statut": "Source principale everyayah : Husary_128kbps/001001.mp3 et Husary_Muallim_128kbps/001001.mp3 ont répondu (HTTP 200, audio/mpeg) le 2026-10-29 depuis internet ; les autres dossiers et la lecture sur téléphone restent à tester avec l'écran « Tester l'audio ».",
  "modele_url": "https://everyayah.com/data/{dossier}/{sourate:3}{verset:3}.mp3",
  "exemple": "https://everyayah.com/data/Husary_128kbps/001001.mp3 = sourate 1, verset 1",
  "recitateurs": [
-  {"id": "husary", "nom": "Mahmoud Khalil al-Husary (murattal)", "dossier": "Husary_128kbps", "usage": "apprentissage, débit lent et très clair"},
-  {"id": "husary_muallim", "nom": "Mahmoud Khalil al-Husary (mu'allim, avec pauses pour répéter)", "dossier": "Husary_Muallim_128kbps", "usage": "mémorisation par répétition"},
-  {"id": "minshawi", "nom": "Muhammad Siddiq al-Minshawi (murattal)", "dossier": "Minshawy_Murattal_128kbps", "usage": "apprentissage"},
-  {"id": "abdulbasit", "nom": "Abdul Basit Abdus Samad (murattal)", "dossier": "Abdul_Basit_Murattal_192kbps", "usage": "écoute"},
-  {"id": "alafasy", "nom": "Mishary Rashid al-Afasy", "dossier": "Alafasy_128kbps", "usage": "écoute"}
- ]
+  {
+   "id": "husary",
+   "nom": "Mahmoud Khalil al-Husary (murattal)",
+   "dossier": "Husary_128kbps",
+   "usage": "apprentissage, débit lent et très clair",
+   "secours": {
+    "edition": "ar.husary",
+    "debit": 128
+   }
+  },
+  {
+   "id": "husary_muallim",
+   "nom": "Mahmoud Khalil al-Husary (mu'allim, avec pauses pour répéter)",
+   "dossier": "Husary_Muallim_128kbps",
+   "usage": "mémorisation par répétition",
+   "secours": {
+    "edition": "ar.husary",
+    "debit": 128,
+    "note": "la version mu'allim n'existe pas sur la source de secours : récitation murattal d'al-Husary à la place"
+   }
+  },
+  {
+   "id": "minshawi",
+   "nom": "Muhammad Siddiq al-Minshawi (murattal)",
+   "dossier": "Minshawy_Murattal_128kbps",
+   "usage": "apprentissage",
+   "secours": {
+    "edition": "ar.minshawi",
+    "debit": 128
+   }
+  },
+  {
+   "id": "abdulbasit",
+   "nom": "Abdul Basit Abdus Samad (murattal)",
+   "dossier": "Abdul_Basit_Murattal_192kbps",
+   "usage": "écoute",
+   "secours": {
+    "edition": "ar.abdulbasitmurattal",
+    "debit": 192
+   }
+  },
+  {
+   "id": "alafasy",
+   "nom": "Mishary Rashid al-Afasy",
+   "dossier": "Alafasy_128kbps",
+   "usage": "écoute",
+   "secours": {
+    "edition": "ar.alafasy",
+    "debit": 128
+   }
+  }
+ ],
+ "secours": {
+  "modele_url": "https://cdn.islamic.network/quran/audio/{debit}/{edition}/{numero_global}.mp3",
+  "numero_global": "rang du verset dans le Coran, de 1 à 6236 (documentation : « The Quran contains 6236 ayahs, so this must be a number between 1 and 6236 »)",
+  "documentation": "https://alquran.cloud/cdn",
+  "statut": "ar.husary, ar.alafasy, ar.minshawi (128) et ar.abdulbasitmurattal (192), verset 1 : HTTP 200, audio/mpeg le 2026-10-29. Lecture sur téléphone non testée."
+ }
 }

@@ -178,3 +178,7 @@ input[type=time]{margin-top:6px}
 .search{display:flex;gap:10px;margin:8px 0 16px}
 .search .btn{width:auto}
 .tab{font-size:10px}
+
+/* Diagnostic audio */
+.diag{min-width:72px;font-weight:900;font-size:13px;color:var(--muted)}
+.diag.good{color:var(--green)} .diag.bad{color:var(--red)}

@@ -438,14 +438,64 @@ function micToggle() {
   $('mic').classList.add('on'); $('micmsg').textContent = 'J\'écoute… touche à nouveau quand tu as fini.';
 }
 
-let audioEl = null;
+/* Audio : everyayah d'abord, puis la source de secours du même récitateur ; une source en échec est évitée jusqu'au rechargement */
+const pad3 = x => String(x).padStart(3, '0');
+const globalAyah = (n, v) => data.surahs.filter(x => x.number < n).reduce((t, x) => t + x.count, 0) + v;
+function audioSources(n, v, r) {
+  const a = data.audio; if (!a) return [];
+  r = r || a.recitateurs.find(x => x.id === prefs().reciter) || a.recitateurs[0];
+  const out = [{ kind: 'principale', url: a.modele_url.replace('{dossier}', r.dossier).replace('{sourate:3}', pad3(n)).replace('{verset:3}', pad3(v)) }];
+  if (a.secours && r.secours) out.push({ kind: 'secours', note: r.secours.note, url: a.secours.modele_url.replace('{debit}', r.secours.debit).replace('{edition}', r.secours.edition).replace('{numero_global}', globalAyah(n, v)) });
+  return out;
+}
+let audioEl = null, audioSeq = 0;
+const audioBad = {};
 function playVerse(n, v) {
-  const a = data.audio, r = a && (a.recitateurs.find(x => x.id === prefs().reciter) || a.recitateurs[0]);
-  if (!r) { toast('Audio indisponible.'); return; }
-  const url = a.modele_url.replace('{dossier}', r.dossier).replace('{sourate:3}', String(n).padStart(3, '0')).replace('{verset:3}', String(v).padStart(3, '0'));
-  if (audioEl) audioEl.pause();
-  audioEl = new Audio(url);
-  audioEl.play().catch(() => toast('Audio indisponible (connexion ou serveur audio).'));
+  const srcs = audioSources(n, v);
+  if (!srcs.length) { toast('Audio indisponible.'); return; }
+  // Un seul lecteur réutilisé : sur iPhone, il reste autorisé après le premier toucher
+  if (!audioEl) audioEl = new Audio();
+  const seq = ++audioSeq;
+  let i = Math.max(0, srcs.findIndex(x => !audioBad[x.kind]));
+  const attempt = () => {
+    if (seq !== audioSeq) return;
+    if (i >= srcs.length) { toast('Audio indisponible. Vérifie la connexion, ou Profil > Tester l\'audio.'); return; }
+    const src = srcs[i];
+    let over = false;
+    const fail = () => { if (over || seq !== audioSeq) return; over = true; clearTimeout(timer); audioBad[src.kind] = true; i++; attempt(); };
+    const timer = setTimeout(fail, 12000);
+    audioEl.onerror = fail;
+    audioEl.onplaying = () => { over = true; clearTimeout(timer); if (src.kind === 'secours') toast(src.note ? 'Source audio de secours : ' + src.note : 'Source audio de secours utilisée.'); };
+    audioEl.src = src.url;
+    audioEl.play().catch(e => { if (e.name === 'NotAllowedError') { over = true; clearTimeout(timer); toast('Touche à nouveau « Écouter ».'); } else if (e.name !== 'AbortError') fail(); });
+  };
+  attempt();
+}
+
+/* Écran de diagnostic : chaque récitateur, sur chaque source, pour la Fatiha verset 1 */
+function audioDiag() {
+  L = null;
+  const a = data.audio, rows = [];
+  if (a) a.recitateurs.forEach(r => audioSources(1, 1, r).forEach(x => rows.push({ r, ...x })));
+  $('app').innerHTML = `<div class="wrap" style="padding-bottom:40px"><div class="row" style="justify-content:flex-start"><button class="x" onclick="render()" aria-label="Retour">${I.back(28)}</button><h2 style="margin:0">Tester l'audio</h2></div>
+    <div class="card" style="margin-top:16px"><p>Connexion : <b>${navigator.onLine ? 'en ligne' : 'hors ligne'}</b></p>
+    <p class="muted small">Navigateur : ${esc(navigator.userAgent)}</p>
+    ${rows.map((x, k) => `<div class="item"><span class="diag" id="d${k}">…</span><div class="grow"><b>${esc(x.r.nom)}</b><div class="muted small">Source ${x.kind}</div></div><button class="link" onclick="diagPlay(${k})">Écouter</button></div>`).join('') || '<p class="bad">Fichier audio.json introuvable.</p>'}</div>
+    <p class="muted">« OK » veut dire que le fichier se charge. Touche « Écouter » pour vérifier que le son sort. Si la source principale échoue, l'appli passe toute seule à la source de secours. Fais une capture de cet écran si un problème persiste.</p></div>`;
+  window.__diag = rows;
+  rows.forEach((x, k) => {
+    const el = new Audio(), mark = (t, c) => { const d = $('d' + k); if (d && d.textContent === '…') { d.textContent = t; d.className = 'diag ' + c; } el.src = ''; };
+    el.preload = 'metadata';
+    el.onloadedmetadata = () => mark('OK', 'good'); el.onerror = () => mark('Échec', 'bad');
+    setTimeout(() => mark('Trop lent', 'bad'), 12000);
+    el.src = x.url; el.load();
+  });
+}
+function diagPlay(k) {
+  if (!audioEl) audioEl = new Audio();
+  audioSeq++; audioEl.onerror = () => toast('Échec de lecture.'); audioEl.onplaying = null;
+  audioEl.src = window.__diag[k].url;
+  audioEl.play().catch(e => { if (e.name !== 'AbortError') toast('Échec de lecture.'); });
 }
 
 /* Fin de séance */
@@ -601,7 +651,7 @@ function viewMe() {
       ${SR ? `<label class="switch"><input type="checkbox" ${pr.voice ? 'checked' : ''} onchange="prefs().voice=this.checked;save();render()"> Réciter à voix haute (micro)</label>
         <p class="muted small">Ta voix est envoyée au service de reconnaissance du navigateur (Google sur Chrome, Apple sur Safari) pour être transcrite. Seuls les mots sont vérifiés, pas le tajwid.</p>`
         : '<p class="muted small">Récitation à voix haute : non disponible sur ce navigateur. Essaie Chrome sur Android ou Safari sur iPhone.</p>'}
-      ${reciters.length ? `<p class="muted" style="margin:10px 0 6px">Récitateur</p><select onchange="prefs().reciter=this.value;save()">${reciters.map(r => `<option value="${esc(r.id)}" ${pr.reciter === r.id ? 'selected' : ''}>${esc(r.nom)}</option>`).join('')}</select>` : ''}</div>
+      ${reciters.length ? `<p class="muted" style="margin:10px 0 6px">Récitateur</p><select onchange="prefs().reciter=this.value;save()">${reciters.map(r => `<option value="${esc(r.id)}" ${pr.reciter === r.id ? 'selected' : ''}>${esc(r.nom)}</option>`).join('')}</select>` : ''}<button class="btn ghost" style="margin-top:12px" onclick="audioDiag()">Tester l'audio</button></div>
     ${backupCard()}
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
     <button class="btn ghost" onclick="switchProfile()">Changer de profil</button>
