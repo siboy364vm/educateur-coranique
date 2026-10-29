@@ -166,3 +166,7 @@ input:focus,select:focus{border-color:var(--blue)}
 @keyframes pulse{50%{outline:10px solid rgba(255,75,75,.25)}}
 .heard{min-height:40px;color:var(--muted);font-size:22px;text-align:center}
 .w-ok{color:var(--ok-fg)} .w-ko{color:var(--ko-fg);text-decoration:underline}
+
+/* Sauvegarde */
+.file-btn{display:block;text-align:center;position:relative;margin-top:12px}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}

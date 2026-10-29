@@ -164,6 +164,7 @@ function profiles() {
       <div class="two"><input id="newname" placeholder="Prénom" maxlength="30"><input id="newage" type="number" min="4" max="99" placeholder="Âge"></div>
       <button class="btn" onclick="addProfile()">Ajouter</button></div></div>
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
+    ${importBtn('Reprendre une sauvegarde')}
     <p class="src">${esc(SOURCE_CORAN)}</p></div>`;
 }
 function addProfile() {
@@ -550,9 +551,103 @@ function viewMe() {
         <p class="muted small">Ta voix est envoyée au service de reconnaissance du navigateur (Google sur Chrome, Apple sur Safari) pour être transcrite. Seuls les mots sont vérifiés, pas le tajwid.</p>`
         : '<p class="muted small">Récitation à voix haute : non disponible sur ce navigateur. Essaie Chrome sur Android ou Safari sur iPhone.</p>'}
       ${reciters.length ? `<p class="muted" style="margin:10px 0 6px">Récitateur</p><select onchange="prefs().reciter=this.value;save()">${reciters.map(r => `<option value="${esc(r.id)}" ${pr.reciter === r.id ? 'selected' : ''}>${esc(r.nom)}</option>`).join('')}</select>` : ''}</div>
+    ${backupCard()}
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
     <button class="btn ghost" onclick="switchProfile()">Changer de profil</button>
     <p class="src">${esc(SOURCE_CORAN)}</p>`;
+}
+
+/* Sauvegarde : un fichier à transférer d'un appareil à l'autre, fusionné à l'import */
+const FORMAT = 'educateur-coranique';
+function backupFile() {
+  const name = `educateur-coranique-${dayKey(Date.now())}.json`;
+  const body = JSON.stringify({ format: FORMAT, version: 1, exportedAt: new Date().toISOString(), data: state });
+  return new File([body], name, { type: 'application/json' });
+}
+const canShareFile = () => { try { return !!(navigator.canShare && navigator.canShare({ files: [backupFile()] })); } catch (e) { return false; } };
+function exported() { state.lastExport = Date.now(); save(); if (cur && tab === 'me' && !L) render(); }
+function downloadBackup() {
+  const f = backupFile(), a = document.createElement('a');
+  a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  exported(); toast('Fichier enregistré dans les téléchargements.');
+}
+function shareBackup() {
+  navigator.share({ files: [backupFile()], title: 'Sauvegarde Éducateur coranique' }).then(exported).catch(e => { if (e.name !== 'AbortError') downloadBackup(); });
+}
+// Le fichier vient de l'extérieur : on ne garde que des champs attendus, aux types attendus
+const num = (x, d = 0) => (Number.isFinite(+x) ? +x : d);
+const safeId = x => (typeof x === 'string' && /^[a-z0-9]{1,20}$/i.test(x) ? x : null);
+const LOG_TYPES = ['lesson', 'quiz', 'study', 'hadith', 'recite'];
+function cleanBackup(d) {
+  if (!d || !Array.isArray(d.profiles) || !Array.isArray(d.log)) throw new Error('format');
+  const profiles = d.profiles.filter(p => p && safeId(p.id) && typeof p.name === 'string').map(p => ({ id: p.id, name: p.name.slice(0, 30), age: num(p.age, 0), createdAt: num(p.createdAt) }));
+  const ids = new Set(profiles.map(p => p.id));
+  const log = d.log.filter(l => l && safeId(l.id) && ids.has(l.profile) && LOG_TYPES.includes(l.type)).map(l => {
+    const o = { id: l.id, profile: l.profile, ts: num(l.ts), type: l.type, xp: num(l.xp), minutes: num(l.minutes) };
+    ['surah', 'lesson', 'score'].forEach(k => { if (l[k] != null) o[k] = num(l[k]); });
+    if (l.pass != null) o.pass = !!l.pass;
+    if (typeof l.hadith === 'string') o.hadith = l.hadith.slice(0, 40);
+    return o;
+  });
+  const perProfile = (obj, f) => Object.fromEntries(Object.entries(obj || {}).filter(([pid]) => ids.has(pid)).map(([pid, v]) => [pid, f(v || {})]));
+  const bySurah = (m, f) => Object.fromEntries(Object.entries(m).filter(([n]) => num(n) >= 1 && num(n) <= 114).map(([n, e]) => [n, f(e)]));
+  return {
+    profiles, log,
+    memo: perProfile(d.memo, m => bySurah(m, e => ({ validated: !!(e && e.validated), box: num(e && e.box), due: num(e && e.due), ...(e && e.validatedAt ? { validatedAt: num(e.validatedAt) } : {}) }))),
+    lessons: perProfile(d.lessons, m => bySurah(m, x => num(x))),
+    prefs: perProfile(d.prefs, p => ({ fr: p.fr !== false, uthmani: !!p.uthmani, voice: !!p.voice, reciter: typeof p.reciter === 'string' ? p.reciter.slice(0, 30) : 'husary', goal: GOALS.some(([g]) => g === p.goal) ? p.goal : 20 })),
+    pin: typeof d.pin === 'string' && /^[0-9a-f]{64}$/.test(d.pin) ? d.pin : null,
+  };
+}
+// Fusion : rien n'est effacé, chaque activité n'est comptée qu'une fois, la progression la plus avancée l'emporte
+function mergeState(a, b) {
+  const out = JSON.parse(JSON.stringify(a));
+  const pids = new Set(out.profiles.map(p => p.id)), lids = new Set(out.log.map(l => l.id));
+  b.profiles.forEach(p => { if (!pids.has(p.id)) { out.profiles.push(p); pids.add(p.id); } });
+  b.log.forEach(l => { if (!lids.has(l.id)) { out.log.push(l); lids.add(l.id); } });
+  out.log.sort((x, y) => x.ts - y.ts);
+  const rank = e => [e.validated ? 1 : 0, e.due];
+  for (const [pid, m] of Object.entries(b.memo)) {
+    const o = out.memo[pid] = out.memo[pid] || {};
+    for (const [n, e] of Object.entries(m)) {
+      const c = o[n], at = [c && c.validatedAt, e.validatedAt].filter(Boolean);
+      if (!c || rank(e)[0] > rank(c)[0] || (rank(e)[0] === rank(c)[0] && rank(e)[1] > rank(c)[1])) o[n] = Object.assign({}, e);
+      if (at.length) o[n].validatedAt = Math.min(...at);
+    }
+  }
+  for (const [pid, m] of Object.entries(b.lessons)) {
+    const o = out.lessons[pid] = out.lessons[pid] || {};
+    for (const [n, x] of Object.entries(m)) o[n] = Math.max(o[n] || 0, x);
+  }
+  for (const [pid, p] of Object.entries(b.prefs)) if (!out.prefs[pid]) out.prefs[pid] = p;
+  out.pin = out.pin || b.pin;
+  return out;
+}
+function importBackup(input) {
+  const f = input.files && input.files[0]; input.value = '';
+  if (!f) return;
+  f.text().then(t => {
+    let inc;
+    try { const j = JSON.parse(t); if (j.format !== FORMAT) throw new Error('format'); inc = cleanBackup(j.data); }
+    catch (e) { toast('Ce fichier n\'est pas une sauvegarde de l\'appli.'); return; }
+    const merged = mergeState(state, inc);
+    const np = merged.profiles.length - state.profiles.length, nl = merged.log.length - state.log.length;
+    if (!confirm(`Importer cette sauvegarde ?\n${inc.profiles.length} profil(s) dans le fichier, dont ${np} nouveau(x) sur cet appareil.\n${nl} activité(s) ajoutée(s). Rien n'est effacé.`)) return;
+    merged.lastExport = state.lastExport; state = merged; save();
+    toast('Sauvegarde importée.');
+    route();
+  });
+}
+const importBtn = (label = 'Importer une sauvegarde') => `<label class="btn ghost file-btn">${label}<input type="file" accept="application/json,.json" onchange="importBackup(this)"></label>`;
+function backupCard() {
+  const last = state.lastExport ? new Date(state.lastExport).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : null;
+  return `<div class="card"><h3>Sauvegarde et autres appareils</h3>
+    <p class="muted">La progression reste sur cet appareil. Pour la retrouver ailleurs (nouveau téléphone, tablette, appareil du parent), envoie-toi le fichier de sauvegarde puis importe-le sur l'autre appareil. L'import fusionne : rien n'est effacé.</p>
+    <p class="muted small">${last ? 'Dernière sauvegarde : ' + last + '.' : 'Aucune sauvegarde faite depuis cet appareil.'} Le fichier contient les prénoms, âges et l'historique de tous les profils de cet appareil.</p>
+    ${canShareFile() ? '<button class="btn blue" onclick="shareBackup()">Envoyer la sauvegarde</button>' : ''}
+    <button class="btn ${canShareFile() ? 'ghost' : 'blue'}" onclick="downloadBackup()">Télécharger le fichier</button>
+    ${importBtn()}</div>`;
 }
 
 /* Espace parent */
@@ -601,6 +696,6 @@ function feed() {
       ${quizzes.length ? `<p class="muted" style="margin-top:8px">Moyenne des vérifications : ${Math.round(quizzes.reduce((t, l) => t + l.score, 0) / quizzes.length)} %</p>` : ''}</div>`;
   }).join('') || '<p>Aucun profil.</p>';
   $('app').innerHTML = `<div class="wrap" style="padding-bottom:40px"><div class="row" style="justify-content:flex-start"><button class="x" onclick="parentBack()" aria-label="Retour">${I.back(28)}</button><h2 style="margin:0">Suivi des profils</h2></div><div style="margin-top:16px">${cards}</div>
-    <p class="muted">Les données sont stockées sur cet appareil. Le suivi à distance arrive avec la synchronisation en ligne.</p></div>`;
+    <p class="muted">Les données sont stockées sur cet appareil. Pour suivre un enfant qui apprend sur un autre appareil, demande-lui d'envoyer sa sauvegarde (Profil) et importe-la ici.</p>${importBtn()}</div>`;
 }
 boot();
