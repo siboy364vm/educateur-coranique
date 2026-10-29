@@ -39,7 +39,7 @@ const srv = http.createServer((q, r) => {
       await pg.click('#cta'); n++;
     }
   }
-  const lessons = await pg.evaluate(() => data.units[0].lessons);
+  const lessons = await pg.evaluate(() => nLessons(data.units[0].s.number));
   for (let i = 0; i < lessons; i++) {
     await pg.click('.node.cur'); await play(i === 0);
     console.log('fin leçon', i + 1, ':', (await pg.textContent('.end h2')));

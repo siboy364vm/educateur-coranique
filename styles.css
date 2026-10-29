@@ -157,3 +157,28 @@ input:focus,select:focus{border-color:var(--blue)}
 .switch input{width:20px;height:20px}
 .form{display:grid;gap:10px}
 .form .two{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+
+/* Récitation vocale */
+.mic-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin:26px 0 10px;text-align:center}
+.mic{width:96px;height:96px;border-radius:50%;border:0;background:var(--blue);box-shadow:0 6px 0 var(--blue-d);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mic:active{transform:translateY(5px);box-shadow:0 1px 0 var(--blue-d)}
+.mic.on{background:var(--red);box-shadow:0 6px 0 var(--red-d);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{outline:10px solid rgba(255,75,75,.25)}}
+.heard{min-height:40px;color:var(--muted);font-size:22px;text-align:center}
+.w-ok{color:var(--ok-fg)} .w-ko{color:var(--ko-fg);text-decoration:underline}
+
+/* Sauvegarde */
+.file-btn{display:block;text-align:center;position:relative;margin-top:12px}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+
+/* Niveau, rappel, recherche */
+.custom{margin-top:12px}
+.custom label{display:grid;gap:6px;font-weight:700;color:var(--muted);font-size:14px}
+input[type=time]{margin-top:6px}
+.search{display:flex;gap:10px;margin:8px 0 16px}
+.search .btn{width:auto}
+.tab{font-size:10px}
+
+/* Diagnostic audio */
+.diag{min-width:72px;font-weight:900;font-size:13px;color:var(--muted)}
+.diag.good{color:var(--green)} .diag.bad{color:var(--red)}

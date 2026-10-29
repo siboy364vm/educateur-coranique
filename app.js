@@ -1,11 +1,15 @@
 'use strict';
 const INTERVALS = [1, 3, 7, 14, 30];
-const PASS = 0.8;
 const KEY = 'ec.v1';
 const DAY = 86400000;
-const CHUNK = 5;      // versets par leçon
-const MAX_EX = 10;    // exercices par leçon
-const XP = { lesson: 10, perfect: 5, practice: 5, quizPass: 20, quizTry: 5, hadith: 5 };
+// Niveaux : versets par leçon, exercices par leçon, questions du vérificateur, seuil, verset visible pendant la récitation
+const LEVELS = {
+  debutant: { nom: 'Débutant', chunk: 3, maxEx: 6, quizN: 6, pass: 0.8, voir: true },
+  standard: { nom: 'Standard', chunk: 5, maxEx: 10, quizN: 10, pass: 0.8, voir: false },
+  avance: { nom: 'Avancé', chunk: 7, maxEx: 14, quizN: 15, pass: 0.9, voir: false },
+};
+const CUSTOM = { chunk: [1, 10], maxEx: [4, 20], quizN: [5, 20], pass: [0.6, 1] };
+const XP = { lesson: 10, perfect: 5, practice: 5, quizPass: 20, quizTry: 5, hadith: 5, recite: 10 };
 const GOALS = [[10, 'Détendu'], [20, 'Normal'], [30, 'Sérieux'], [50, 'Intense']];
 const COLORS = [['#58cc02', '#58a700'], ['#ce82ff', '#a568cc'], ['#1cb0f6', '#1899d6'], ['#ff9600', '#e08600'], ['#ff86d0', '#e070b5'], ['#2bc4a6', '#1fa088']];
 const ZIG = [0, 44, 66, 44, 0, -44, -66, -44];
@@ -21,7 +25,13 @@ function load() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
   s = s || { profiles: [], log: [], memo: {}, pin: null };
-  s.lessons = s.lessons || {}; s.prefs = s.prefs || {};
+  s.prefs = s.prefs || {};
+  if (!s.vdone) {
+    // Ancien format : nombre de leçons de 5 versets, converti en versets couverts
+    s.vdone = {};
+    for (const [pid, m] of Object.entries(s.lessons || {})) s.vdone[pid] = Object.fromEntries(Object.entries(m).map(([n, x]) => [n, x * 5]));
+  }
+  delete s.lessons;
   return s;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -40,6 +50,35 @@ async function getJSON(f) {
 }
 const surahFile = n => `data/coran/sourates/${String(n).padStart(3, '0')}.json`;
 
+/* Récitation vocale : la transcription du navigateur est comparée mot à mot au verset (le tajwid n'est pas jugé) */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const arNorm = s => String(s).replace(/[ٱأإآ]/g, 'ا').replace(/[ؐ-ًؚ-ٰٟۖ-ۭـ]/g, '')
+  .replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '')
+  .replace(/[^ء-ي\s]/g, ' ').split(/\s+/).filter(Boolean);
+function lev(a, b) {
+  let p = [...Array(b.length + 1).keys()];
+  for (let i = 1; i <= a.length; i++) {
+    const q = [i];
+    for (let j = 1; j <= b.length; j++) q[j] = Math.min(p[j] + 1, q[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    p = q;
+  }
+  return p[b.length];
+}
+const sameWord = (a, b) => a === b || lev(a, b) <= (Math.max(a.length, b.length) >= 9 ? 2 : Math.max(a.length, b.length) >= 5 ? 1 : 0);
+// Plus longue sous-suite commune : chaque mot attendu est marqué entendu ou manquant
+function compareRecitation(expected, spoken) {
+  const e = arNorm(expected), s = arNorm(spoken);
+  const t = [...Array(e.length + 1)].map(() => new Array(s.length + 1).fill(0));
+  for (let i = e.length - 1; i >= 0; i--) for (let j = s.length - 1; j >= 0; j--)
+    t[i][j] = sameWord(e[i], s[j]) ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
+  const marks = new Array(e.length).fill(false);
+  for (let i = 0, j = 0; i < e.length && j < s.length;) {
+    if (sameWord(e[i], s[j]) && t[i][j] === t[i + 1][j + 1] + 1) { marks[i] = true; i++; j++; }
+    else if (t[i + 1][j] >= t[i][j + 1]) i++; else j++;
+  }
+  return { score: e.length ? marks.filter(Boolean).length / e.length : 0, marks };
+}
+
 /* Icônes : formes simples et motifs géométriques uniquement */
 const I = {
   star: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><g fill="${c}"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="5" y="5" width="14" height="14" rx="2" transform="rotate(45 12 12)"/></g></svg>`,
@@ -50,10 +89,12 @@ const I = {
   trophy: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="${c}" d="M7 3h10v2h3.5v1.5A4.5 4.5 0 0 1 16.6 11 5 5 0 0 1 13 13.8V17h3v4H8v-4h3v-3.2A5 5 0 0 1 7.4 11 4.5 4.5 0 0 1 3.5 6.5V5H7zm0 3.5H5.3A2.8 2.8 0 0 0 7 9zm10 0V9a2.8 2.8 0 0 0 1.7-2.5z"/></svg>`,
   refresh: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 3.5V9h-5.5" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   sound: (s = 22, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9h4l5-4v14l-5-4h-4z" fill="${c}"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.5 8.5 0 0 1 0 12" stroke="${c}" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`,
+  mic: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="2" width="7" height="12.5" rx="3.5" fill="${c}"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`,
   x: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
   home: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="${c}" d="M12 2.5l9.5 8.2V21a1 1 0 0 1-1 1H15v-6.5H9V22H3.5a1 1 0 0 1-1-1V10.7z"/></svg>`,
   chart: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><g fill="${c}"><rect x="3" y="12" width="5" height="9" rx="1.5"/><rect x="9.5" y="6" width="5" height="15" rx="1.5"/><rect x="16" y="2.5" width="5" height="18.5" rx="1.5"/></g></svg>`,
   shield: (s = 22, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="${c}" d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z"/></svg>`,
+  search: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="${c}" stroke-width="3" fill="none"/><path d="M15.5 15.5L21 21" stroke="${c}" stroke-width="3.2" stroke-linecap="round"/></svg>`,
   back: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   ring: (pct, s = 26) => { const r = 9, c = 2 * Math.PI * r; return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="${r}" stroke="var(--line)" stroke-width="4" fill="none"/><circle cx="12" cy="12" r="${r}" stroke="var(--blue)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="${c * Math.min(1, pct)} ${c}" transform="rotate(-90 12 12)"/></svg>`; },
 };
@@ -66,7 +107,7 @@ async function boot() {
     data = { surahs: list.map(x => ({ number: x.numero, name_ar: x.nom_arabe, name_fr: x.nom_translit, count: x.nb_versets, juz: x.juz_debut })), ordre: ordre.ordre_sourates, hadiths: hq.hadiths, audio: null };
   } catch (e) { $('app').innerHTML = '<div class="wrap"><p class="bad">Données introuvables.</p></div>'; return; }
   try { data.audio = await getJSON('data/coran/audio.json'); } catch (e) {}
-  data.units = data.ordre.map((n, i) => { const s = data.surahs.find(x => x.number === n); return { rank: i + 1, s, lessons: Math.ceil(s.count / CHUNK) }; });
+  data.units = data.ordre.map((n, i) => { const s = data.surahs.find(x => x.number === n); return { rank: i + 1, s }; });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
   cur = localStorage.getItem('ec.cur');
   if (!state.profiles.find(p => p.id === cur)) cur = null;
@@ -77,9 +118,14 @@ async function boot() {
 /* Profil courant et calculs de progression */
 const me = () => state.profiles.find(p => p.id === cur);
 const memo = () => (state.memo[cur] = state.memo[cur] || {});
-const prefs = () => (state.prefs[cur] = Object.assign({ fr: true, uthmani: false, reciter: 'husary', goal: 20 }, state.prefs[cur]));
-const lessonsDone = n => (state.lessons[cur] || {})[n] || 0;
+const prefs = () => (state.prefs[cur] = Object.assign({ fr: true, uthmani: false, reciter: 'husary', goal: 20, voice: false, level: 'standard', reminder: '18:00' }, state.prefs[cur]));
+const lv = () => { const p = prefs(); return p.level === 'perso' ? Object.assign({}, LEVELS.standard, p.custom, { nom: 'Personnalisé' }) : LEVELS[p.level] || LEVELS.standard; };
+const countOf = n => data.surahs.find(x => x.number === n).count;
+const nLessons = n => Math.ceil(countOf(n) / lv().chunk);
+const vdone = n => Math.min(countOf(n), (state.vdone[cur] || {})[n] || 0);
+const lessonsDone = n => vdone(n) >= countOf(n) ? nLessons(n) : Math.floor(vdone(n) / lv().chunk);
 const isValid = n => !!(memo()[n] && memo()[n].validated);
+const voiceOn = () => !!(SR && prefs().voice);
 const isDue = n => isValid(n) && memo()[n].due <= Date.now();
 const colorOf = id => COLORS[[...String(id)].reduce((t, c) => t + c.charCodeAt(0), 0) % COLORS.length][0];
 const mine = pid => state.log.filter(l => l.profile === pid);
@@ -102,7 +148,7 @@ function route() { L = null; cur ? render() : profiles(); }
 function go(t) { tab = t; shown = 0; render(); window.scrollTo(0, 0); }
 function render() {
   L = null;
-  const views = { learn: viewLearn, review: viewReview, hadith: viewHadith, me: viewMe };
+  const views = { learn: viewLearn, review: viewReview, hadith: viewHadith, search: viewSearch, me: viewMe };
   shell((views[tab] || viewLearn)());
   if (tab === 'learn') { const c = document.querySelector('.node.cur'); if (c && !shown) c.scrollIntoView({ block: 'center' }); }
 }
@@ -119,7 +165,7 @@ function shell(inner) {
     </div></div>
     <div class="wrap">${inner}</div>
     <nav class="tabs"><div class="in">
-      ${t('learn', I.home(), 'Apprendre')}${t('review', I.refresh(26), 'Réviser', due)}${t('hadith', I.book(26), 'Hadith')}${t('me', I.chart(), 'Profil')}
+      ${t('learn', I.home(), 'Apprendre')}${t('review', I.refresh(26), 'Réviser', due)}${t('hadith', I.book(26), 'Hadith')}${t('search', I.search(), 'Chercher')}${t('me', I.chart(), 'Profil')}
     </div></nav>`;
 }
 
@@ -133,12 +179,15 @@ function profiles() {
       <div class="two"><input id="newname" placeholder="Prénom" maxlength="30"><input id="newage" type="number" min="4" max="99" placeholder="Âge"></div>
       <button class="btn" onclick="addProfile()">Ajouter</button></div></div>
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
+    ${importBtn('Reprendre une sauvegarde')}
     <p class="src">${esc(SOURCE_CORAN)}</p></div>`;
 }
 function addProfile() {
   const n = $('newname').value.trim(), age = parseInt($('newage').value, 10);
   if (!n || !(age > 0)) { toast('Indique un prénom et un âge.'); return; }
-  state.profiles.push({ id: uid(), name: n, age, createdAt: Date.now() });
+  const id = uid();
+  state.profiles.push({ id, name: n, age, createdAt: Date.now() });
+  state.prefs[id] = { level: age < 10 ? 'debutant' : 'standard' };
   save(); profiles();
 }
 function pickProfile(id) { cur = id; localStorage.setItem('ec.cur', id); tab = 'learn'; route(); }
@@ -160,32 +209,32 @@ function viewLearn() {
 }
 function unitHtml(u, ui, ci) {
   const [c, cd] = COLORS[ui % COLORS.length], n = u.s.number, valid = isValid(n), lockedUnit = ui > ci;
-  const ld = valid ? u.lessons : lessonsDone(n);
+  const nl = nLessons(n), ch = lv().chunk, ld = valid ? nl : lessonsDone(n);
   let z = 0, nodes = '';
-  for (let i = 0; i < u.lessons; i++) {
-    const a = i * CHUNK + 1, b = Math.min(u.s.count, a + CHUNK - 1);
+  for (let i = 0; i < nl; i++) {
+    const a = i * ch + 1, b = Math.min(u.s.count, a + ch - 1);
     const st = i < ld ? 'done' : (ui === ci && i === ld ? 'cur' : 'lock');
     nodes += `<button class="node ${st}" style="--x:${ZIG[z++ % ZIG.length]}px;--c:${c};--cd:${cd}" onclick="openLesson(${ui},${i})" aria-label="Leçon ${i + 1}, versets ${a} à ${b}">
       ${st === 'cur' ? '<span class="bubble">Commencer</span>' : ''}${st === 'done' ? I.check(34, '#fff') : I.star(34, st === 'lock' ? '#afafaf' : '#fff')}</button>`;
   }
-  const chk = valid ? (isDue(n) ? 'due' : 'done') : (ui === ci && ld >= u.lessons ? 'cur' : 'lock');
+  const chk = valid ? (isDue(n) ? 'due' : 'done') : (ui === ci && ld >= nl ? 'cur' : 'lock');
   nodes += `<button class="node chk ${chk}" style="--x:${ZIG[z % ZIG.length]}px;--c:${c};--cd:${cd}" onclick="openCheck(${ui})" aria-label="Vérificateur de la sourate">
     ${chk === 'cur' ? '<span class="bubble">Vérificateur</span>' : ''}${chk === 'due' ? I.refresh(36, '#fff') : I.trophy(36, chk === 'lock' ? '#afafaf' : '#fff')}</button>`;
   return `<div class="unit" style="background:${lockedUnit ? 'var(--lock-d)' : c}">
       <div class="row"><div><div class="k">Étape ${u.rank} · Juz ${u.s.juz}</div><div class="t">${esc(u.s.name_fr)}</div></div><div class="ar">${esc(u.s.name_ar)}</div></div>
-      <div class="k" style="text-transform:none;letter-spacing:0">${u.s.count} versets · ${u.lessons} leçon(s) · ${valid ? 'validée' : ld + ' leçon(s) faite(s)'}</div>
-      <div class="acts"><button class="chip" onclick="readSurah(${n})">${I.book(16, '#fff')}Lire</button>${valid ? '' : `<button class="chip" onclick="startQuiz(${n})">${I.trophy(16, '#fff')}Passer le test</button>`}</div>
+      <div class="k" style="text-transform:none;letter-spacing:0">${u.s.count} versets · ${nl} leçon(s) · ${valid ? 'validée' : ld + ' leçon(s) faite(s)'}</div>
+      <div class="acts"><button class="chip" onclick="readSurah(${n})">${I.book(16, '#fff')}Lire</button>${valid ? '' : `<button class="chip" onclick="startQuiz(${n})">${I.trophy(16, '#fff')}Passer le test</button>`}${voiceOn() ? `<button class="chip" onclick="startRecite(${n})">${I.mic(16, '#fff')}Réciter</button>` : ''}</div>
     </div><div class="path">${nodes}</div>`;
 }
 function openLesson(ui, i) {
   const u = data.units[ui], { ci } = pathState(), n = u.s.number;
-  const ld = isValid(n) ? u.lessons : lessonsDone(n);
+  const ld = isValid(n) ? nLessons(n) : lessonsDone(n);
   if (i < ld || (ui === ci && i === ld)) startLesson(n, i);
   else toast('Leçon verrouillée. Termine d\'abord les précédentes ou passe le test de l\'étape.');
 }
 function openCheck(ui) {
   const u = data.units[ui], { ci } = pathState(), n = u.s.number;
-  if (isValid(n) || (ui === ci && lessonsDone(n) >= u.lessons)) startQuiz(n);
+  if (isValid(n) || (ui === ci && lessonsDone(n) >= nLessons(n))) startQuiz(n);
   else toast('Termine les leçons de cette étape, ou utilise « Passer le test » pour avancer.');
 }
 
@@ -225,24 +274,35 @@ async function loadPool(n) {
 async function startLesson(n, idx) {
   let v, pool;
   try { ({ v, pool } = await loadPool(n)); } catch (e) { toast('Sourate introuvable.'); return; }
-  const chunk = v.slice(idx * CHUNK, idx * CHUNK + CHUNK), steps = [], rest = [];
+  const { chunk: ch, maxEx } = lv(), chunk = v.slice(idx * ch, idx * ch + ch), steps = [], rest = [];
   chunk.forEach((a, j) => {
     steps.push({ t: 'learn', v: a }, blankEx(a, pool));
     const o = orderEx(a); if (o) rest.push(o);
-    const prev = j ? chunk[j - 1] : v[idx * CHUNK - 1];
+    const prev = j ? chunk[j - 1] : v[idx * ch - 1];
     if (prev) { const e = nextEx(prev, a, v); if (e) rest.push(e); }
   });
-  const room = Math.max(0, MAX_EX - chunk.length);
+  const room = Math.max(0, maxEx - chunk.length);
   steps.push(...shuffle(rest).slice(0, room));
+  if (voiceOn()) chunk.forEach((a, j) => steps.push(reciteEx(a, j ? chunk[j - 1] : v[idx * ch - 1])));
   const total = steps.filter(s => s.t !== 'learn').length;
   L = { kind: 'lesson', n, idx, steps, k: 0, ok: 0, total, retried: new Set(), start: Date.now(), practice: isValid(n) || idx < lessonsDone(n) };
   renderStep();
 }
-// Vérificateur : 10 versets tirés au hasard, mot manquant à retrouver, seuil 80 %
+const reciteEx = (a, prev) => ({ t: 'recite', v: a, prev, answer: a.normalise });
+// Récitation de mémoire de toute la sourate, verset par verset
+async function startRecite(n) {
+  if (!SR) { toast('Reconnaissance vocale indisponible sur ce navigateur.'); return; }
+  let v;
+  try { v = (await getJSON(surahFile(n))).versets; } catch (e) { toast('Sourate introuvable.'); return; }
+  const steps = v.map((a, j) => reciteEx(a, v[j - 1]));
+  L = { kind: 'recite', n, steps, k: 0, ok: 0, total: steps.length, retried: new Set(), start: Date.now() };
+  renderStep();
+}
+// Vérificateur : versets tirés au hasard (10 au niveau standard), mot manquant à retrouver, seuil du niveau
 async function startQuiz(n) {
   let v, pool;
   try { ({ v, pool } = await loadPool(n)); } catch (e) { toast('Sourate introuvable.'); return; }
-  const steps = shuffle(v).slice(0, 10).map(a => blankEx(a, pool));
+  const steps = shuffle(v).slice(0, lv().quizN).map(a => blankEx(a, pool));
   L = { kind: 'quiz', n, steps, k: 0, ok: 0, total: steps.length, retried: new Set(), start: Date.now() };
   renderStep();
 }
@@ -271,18 +331,27 @@ function stepBody(st) {
       ${prefs().fr && st.frag.length === st.w.length ? `<p class="muted">${esc(st.v.fr)}</p>` : ''}
       <div class="answer-line" id="line"></div><div class="bank" id="bank"></div>`;
   }
+  if (st.t === 'recite') {
+    return `<div class="prompt">Récite le verset ${st.v.n}</div>
+      <div class="muted">${esc(s.name_fr)} · ${st.prev ? 'après :' : 'début de la sourate'}</div>${st.prev ? `<div class="ar muted" style="font-size:22px">${esc(head(st.prev, 10))}</div>` : ''}
+      <div id="peek">${L.peek ? peekHtml() : `<button class="link" onclick="L.peek=true;$('peek').innerHTML=peekHtml()">Voir le verset</button>`}</div>
+      <div class="mic-wrap"><button class="mic" id="mic" onclick="micToggle()" aria-label="Parler">${I.mic(44, '#fff')}</button><div class="muted" id="micmsg">Touche le micro, récite, puis touche à nouveau.</div></div>
+      <div class="ar heard" id="heard" dir="rtl"></div>`;
+  }
   return `<div class="prompt">Quel verset vient ensuite ?</div>
     <div class="muted">${esc(s.name_fr)} · après le verset ${st.prev.n}</div><div class="ar">${esc(head(st.prev, 14))}</div>
     <div class="opts">${st.opts.map((o, i) => `<button class="opt long" data-v="${esc(o.key)}" onclick="choose(${i})">${esc(o.label)}</button>`).join('')}</div>`;
 }
+const peekHtml = () => `<div class="ar">${esc(vtext(L.steps[L.k].v))}</div>`;
 function renderStep() {
-  const st = L.steps[L.k]; L.sel = null; L.checked = false; L.order = [];
+  micStop(); const st = L.steps[L.k]; L.sel = null; L.checked = false; L.order = []; L.heard = null; L.peek = lv().voir;
   const pct = Math.round(100 * L.k / L.steps.length);
   $('app').innerHTML = `<div class="lesson">
     <div class="lhead"><button class="x" onclick="quitLesson()" aria-label="Quitter">${I.x()}</button><div class="prog"><i style="width:${pct}%"></i></div></div>
     <div class="lbody">${stepBody(st)}</div><div class="lfoot" id="foot"></div></div>`;
   if (st.t === 'order') renderOrder();
-  foot(st.t === 'learn' ? `<button class="btn" id="cta" onclick="nextStep()">Continuer</button>` : `<button class="btn" id="cta" onclick="checkStep()" disabled>Vérifier</button>`);
+  foot(st.t === 'learn' ? `<button class="btn" id="cta" onclick="nextStep()">Continuer</button>` : `<button class="btn" id="cta" onclick="checkStep()" disabled>Vérifier</button>`
+    + (st.t === 'recite' ? `<button class="link" style="width:100%;margin-top:8px" onclick="skipVoice()">Je ne peux pas parler maintenant</button>` : ''));
   window.scrollTo(0, 0);
 }
 function foot(html, cls = '') { const f = $('foot'); f.className = 'lfoot ' + cls; f.innerHTML = `<div class="in">${html}</div>`; }
@@ -303,8 +372,9 @@ function unplace(j) { if (L.checked) return; L.order.splice(j, 1); renderOrder()
 const PRAISE = ['Excellent !', 'Bravo !', 'Très bien !', 'Parfait !', 'Bien joué !'];
 function checkStep() {
   const st = L.steps[L.k]; if (L.checked) return;
-  let given;
-  if (st.t === 'order') given = L.order.map(bi => st.frag[st.bank[bi]].n).join(' ');
+  let given, rec;
+  if (st.t === 'recite') { if (!L.heard) return; micStop(); rec = L.heard.map(h => compareRecitation(st.answer, h)).sort((a, b) => b.score - a.score)[0]; given = rec.score >= lv().pass ? st.answer : ''; }
+  else if (st.t === 'order') given = L.order.map(bi => st.frag[st.bank[bi]].n).join(' ');
   else { if (L.sel === null) return; given = st.opts[L.sel].key; }
   const good = given === st.answer;
   L.checked = true;
@@ -312,28 +382,120 @@ function checkStep() {
   if (!L.retried.has(st)) { if (good) L.ok++; }
   if (!good && L.kind === 'lesson' && !L.retried.has(st)) {
     // L'exercice raté revient en fin de leçon, une fois
-    const again = Object.assign({}, st, st.opts ? { opts: shuffle(st.opts) } : { bank: shuffle(st.bank) });
+    const again = Object.assign({}, st, st.opts ? { opts: shuffle(st.opts) } : st.bank ? { bank: shuffle(st.bank) } : {});
     L.retried.add(again); L.steps.push(again);
   }
   let sol = '';
   if (!good) {
-    const txt = st.t === 'order' ? esc(st.frag.map(x => x.s).join(' ')) : st.t === 'next' ? esc(head(st.v, 14)) : st.w.map((x, j) => j === st.i ? `<u>${esc(x.s)}</u>` : esc(x.s)).slice(Math.max(0, st.i - 7), st.i + 8).join(' ');
+    const txt = st.t === 'recite' ? '' : st.t === 'order' ? esc(st.frag.map(x => x.s).join(' ')) : st.t === 'next' ? esc(head(st.v, 14)) : st.w.map((x, j) => j === st.i ? `<u>${esc(x.s)}</u>` : esc(x.s)).slice(Math.max(0, st.i - 7), st.i + 8).join(' ');
     sol = `<div class="sol">Bonne réponse :<div class="ar">${txt}</div></div>`;
+  }
+  if (rec) {
+    // Mots entendus en vert, mots manquants en rouge
+    const ws = words(st.v), lab = ws.length === rec.marks.length ? ws.map(x => x.s) : arNorm(st.answer);
+    sol = `<div class="sol">${Math.round(rec.score * 100)} % des mots reconnus. Le tajwid n'est pas évalué.<div class="ar">${lab.map((w, i) => `<span class="${rec.marks[i] ? 'w-ok' : 'w-ko'}">${esc(w)}</span>`).join(' ')}</div></div>`;
   }
   foot(`<div class="fb"><span class="ico">${good ? I.check(30, 'var(--green)') : I.x(26, 'var(--red)')}</span><div>${good ? pick1(PRAISE) : 'Pas tout à fait.'}${sol}</div></div>
     <button class="btn ${good ? '' : 'red'}" id="cta" onclick="nextStep()">Continuer</button>`, good ? 'ok' : 'ko');
 }
+function skipVoice() {
+  // Retire les récitations restantes de la séance
+  micStop();
+  const rest = L.steps.slice(L.k).filter(s => s.t === 'recite');
+  L.total -= rest.filter(s => !L.retried.has(s)).length;
+  L.steps = L.steps.slice(0, L.k).concat(L.steps.slice(L.k).filter(s => s.t !== 'recite'));
+  L.k < L.steps.length ? renderStep() : finish();
+}
 function nextStep() { L.k++; L.k < L.steps.length ? renderStep() : finish(); }
-function quitLesson() { if (confirm('Quitter ? La progression de cette séance sera perdue.')) { L = null; render(); } }
+function quitLesson() { micStop(); if (confirm('Quitter ? La progression de cette séance sera perdue.')) { L = null; render(); } }
 
-let audioEl = null;
+let rec = null;
+function micStop() { if (rec) { rec.onend = rec.onresult = rec.onerror = null; try { rec.abort(); } catch (e) {} rec = null; const m = $('mic'); if (m) m.classList.remove('on'); } }
+function micToggle() {
+  if (!L || L.checked) return;
+  if (rec) { rec.stop(); return; }
+  if (!SR) { toast('Reconnaissance vocale indisponible sur ce navigateur.'); return; }
+  const r = rec = new SR();
+  r.lang = 'ar-SA'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
+  let segs = [], err = null;
+  r.onresult = e => {
+    segs = [...e.results].map(x => [...x].map(a => a.transcript));
+    $('heard').textContent = segs.map(x => x[0]).join(' ');
+  };
+  r.onerror = e => { err = e.error; };
+  r.onend = () => {
+    rec = null; $('mic').classList.remove('on');
+    const msgs = { 'not-allowed': 'Micro refusé. Autorise le micro pour ce site dans le navigateur.', 'service-not-allowed': 'Micro refusé. Autorise le micro pour ce site dans le navigateur.', network: 'La reconnaissance vocale demande une connexion internet.', 'language-not-supported': 'Ce navigateur ne reconnaît pas l\'arabe.', 'audio-capture': 'Aucun micro détecté.' };
+    if (!segs.length) { $('micmsg').textContent = msgs[err] || 'Rien entendu. Touche le micro et réessaie.'; return; }
+    // Une transcription par rang d'alternative ; la meilleure est retenue à la vérification
+    const n = Math.max(...segs.map(x => x.length));
+    L.heard = [...Array(n)].map((_, i) => segs.map(x => x[i] || x[0]).join(' '));
+    $('micmsg').textContent = 'Touche « Vérifier », ou le micro pour recommencer.';
+    $('cta').disabled = false;
+  };
+  try { r.start(); } catch (e) { rec = null; toast('Impossible de démarrer le micro.'); return; }
+  L.heard = null; $('cta').disabled = true; $('heard').textContent = '';
+  $('mic').classList.add('on'); $('micmsg').textContent = 'J\'écoute… touche à nouveau quand tu as fini.';
+}
+
+/* Audio : everyayah d'abord, puis la source de secours du même récitateur ; une source en échec est évitée jusqu'au rechargement */
+const pad3 = x => String(x).padStart(3, '0');
+const globalAyah = (n, v) => data.surahs.filter(x => x.number < n).reduce((t, x) => t + x.count, 0) + v;
+function audioSources(n, v, r) {
+  const a = data.audio; if (!a) return [];
+  r = r || a.recitateurs.find(x => x.id === prefs().reciter) || a.recitateurs[0];
+  const out = [{ kind: 'principale', url: a.modele_url.replace('{dossier}', r.dossier).replace('{sourate:3}', pad3(n)).replace('{verset:3}', pad3(v)) }];
+  if (a.secours && r.secours) out.push({ kind: 'secours', note: r.secours.note, url: a.secours.modele_url.replace('{debit}', r.secours.debit).replace('{edition}', r.secours.edition).replace('{numero_global}', globalAyah(n, v)) });
+  return out;
+}
+let audioEl = null, audioSeq = 0;
+const audioBad = {};
 function playVerse(n, v) {
-  const a = data.audio, r = a && (a.recitateurs.find(x => x.id === prefs().reciter) || a.recitateurs[0]);
-  if (!r) { toast('Audio indisponible.'); return; }
-  const url = a.modele_url.replace('{dossier}', r.dossier).replace('{sourate:3}', String(n).padStart(3, '0')).replace('{verset:3}', String(v).padStart(3, '0'));
-  if (audioEl) audioEl.pause();
-  audioEl = new Audio(url);
-  audioEl.play().catch(() => toast('Audio indisponible (connexion ou serveur audio).'));
+  const srcs = audioSources(n, v);
+  if (!srcs.length) { toast('Audio indisponible.'); return; }
+  // Un seul lecteur réutilisé : sur iPhone, il reste autorisé après le premier toucher
+  if (!audioEl) audioEl = new Audio();
+  const seq = ++audioSeq;
+  let i = Math.max(0, srcs.findIndex(x => !audioBad[x.kind]));
+  const attempt = () => {
+    if (seq !== audioSeq) return;
+    if (i >= srcs.length) { toast('Audio indisponible. Vérifie la connexion, ou Profil > Tester l\'audio.'); return; }
+    const src = srcs[i];
+    let over = false;
+    const fail = () => { if (over || seq !== audioSeq) return; over = true; clearTimeout(timer); audioBad[src.kind] = true; i++; attempt(); };
+    const timer = setTimeout(fail, 12000);
+    audioEl.onerror = fail;
+    audioEl.onplaying = () => { over = true; clearTimeout(timer); if (src.kind === 'secours') toast(src.note ? 'Source audio de secours : ' + src.note : 'Source audio de secours utilisée.'); };
+    audioEl.src = src.url;
+    audioEl.play().catch(e => { if (e.name === 'NotAllowedError') { over = true; clearTimeout(timer); toast('Touche à nouveau « Écouter ».'); } else if (e.name !== 'AbortError') fail(); });
+  };
+  attempt();
+}
+
+/* Écran de diagnostic : chaque récitateur, sur chaque source, pour la Fatiha verset 1 */
+function audioDiag() {
+  L = null;
+  const a = data.audio, rows = [];
+  if (a) a.recitateurs.forEach(r => audioSources(1, 1, r).forEach(x => rows.push({ r, ...x })));
+  $('app').innerHTML = `<div class="wrap" style="padding-bottom:40px"><div class="row" style="justify-content:flex-start"><button class="x" onclick="render()" aria-label="Retour">${I.back(28)}</button><h2 style="margin:0">Tester l'audio</h2></div>
+    <div class="card" style="margin-top:16px"><p>Connexion : <b>${navigator.onLine ? 'en ligne' : 'hors ligne'}</b></p>
+    <p class="muted small">Navigateur : ${esc(navigator.userAgent)}</p>
+    ${rows.map((x, k) => `<div class="item"><span class="diag" id="d${k}">…</span><div class="grow"><b>${esc(x.r.nom)}</b><div class="muted small">Source ${x.kind}</div></div><button class="link" onclick="diagPlay(${k})">Écouter</button></div>`).join('') || '<p class="bad">Fichier audio.json introuvable.</p>'}</div>
+    <p class="muted">« OK » veut dire que le fichier se charge. Touche « Écouter » pour vérifier que le son sort. Si la source principale échoue, l'appli passe toute seule à la source de secours. Fais une capture de cet écran si un problème persiste.</p></div>`;
+  window.__diag = rows;
+  rows.forEach((x, k) => {
+    const el = new Audio(), mark = (t, c) => { const d = $('d' + k); if (d && d.textContent === '…') { d.textContent = t; d.className = 'diag ' + c; } el.src = ''; };
+    el.preload = 'metadata';
+    el.onloadedmetadata = () => mark('OK', 'good'); el.onerror = () => mark('Échec', 'bad');
+    setTimeout(() => mark('Trop lent', 'bad'), 12000);
+    el.src = x.url; el.load();
+  });
+}
+function diagPlay(k) {
+  if (!audioEl) audioEl = new Audio();
+  audioSeq++; audioEl.onerror = () => toast('Échec de lecture.'); audioEl.onplaying = null;
+  audioEl.src = window.__diag[k].url;
+  audioEl.play().catch(e => { if (e.name !== 'AbortError') toast('Échec de lecture.'); });
 }
 
 /* Fin de séance */
@@ -343,11 +505,16 @@ function finish() {
   let xp, title, msg = '', pass = true;
   if (L.kind === 'lesson') {
     xp = L.practice ? XP.practice : XP.lesson + (acc === 1 ? XP.perfect : 0);
-    if (!L.practice) { (state.lessons[cur] = state.lessons[cur] || {})[n] = Math.max(lessonsDone(n), L.idx + 1); }
+    if (!L.practice) { const d = state.vdone[cur] = state.vdone[cur] || {}; d[n] = Math.max(vdone(n), Math.min(countOf(n), (L.idx + 1) * lv().chunk)); }
     state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'lesson', surah: n, lesson: L.idx + 1, score: Math.round(acc * 100), xp, minutes: mins });
     title = L.practice ? 'Entraînement terminé !' : 'Leçon terminée !';
+  } else if (L.kind === 'recite') {
+    xp = acc >= lv().pass ? XP.recite : XP.practice;
+    state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'recite', surah: n, score: Math.round(acc * 100), xp, minutes: mins });
+    title = 'Récitation terminée !';
+    msg = 'Seuls les mots sont vérifiés, pas le tajwid. Fais aussi écouter ta récitation à un enseignant.';
   } else {
-    const score = acc; pass = score >= PASS;
+    const score = acc; pass = score >= lv().pass;
     const m = memo(); const e = m[n] = m[n] || { validated: false, box: 0, due: 0 };
     if (pass) { e.validated = true; e.box = Math.min(e.box + 1, INTERVALS.length); e.validatedAt = e.validatedAt || Date.now(); }
     else e.box = 1;
@@ -355,7 +522,7 @@ function finish() {
     xp = pass ? XP.quizPass : XP.quizTry;
     state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'quiz', surah: n, score: Math.round(score * 100), pass, xp, minutes: mins });
     title = pass ? 'Sourate validée !' : 'Pas encore validée';
-    msg = pass ? `Prochaine révision dans ${INTERVALS[e.box - 1]} jour(s).` : `Seuil de ${PASS * 100} % non atteint. Relis la sourate et recommence demain.`;
+    msg = pass ? `Prochaine révision dans ${INTERVALS[e.box - 1]} jour(s).` : `Seuil de ${Math.round(lv().pass * 100)} % non atteint. Relis la sourate et recommence demain.`;
   }
   save();
   const s = data.surahs.find(x => x.number === n), st = streak(cur), reached = before < goal && before + xp >= goal;
@@ -371,7 +538,7 @@ function finish() {
 
 /* Lecture d'une sourate complète */
 let readStart = 0;
-async function readSurah(n) {
+async function readSurah(n, at) {
   const s = data.surahs.find(x => x.number === n), pr = prefs();
   let v;
   try { v = (await getJSON(surahFile(n))).versets; } catch (e) { toast('Sourate introuvable.'); return; }
@@ -381,10 +548,11 @@ async function readSurah(n) {
     <div class="lbody" style="padding-bottom:120px">
       <label class="switch"><input type="checkbox" ${pr.fr ? 'checked' : ''} onchange="prefs().fr=this.checked;save();readSurah(${n})"> Traduction</label>
       <label class="switch"><input type="checkbox" ${pr.uthmani ? 'checked' : ''} onchange="prefs().uthmani=this.checked;save();readSurah(${n})"> Texte uthmani (police Coran conseillée)</label>
-      ${v.map(a => `<div class="item" style="display:block"><div class="row"><span class="vnum">${a.n}</span><button class="link" onclick="playVerse(${n},${a.n})" aria-label="Écouter le verset ${a.n}">${I.sound(22)}</button></div>
+      ${v.map(a => `<div class="item" id="v${a.n}" style="display:block"><div class="row"><span class="vnum">${a.n}</span><button class="link" onclick="playVerse(${n},${a.n})" aria-label="Écouter le verset ${a.n}">${I.sound(22)}</button></div>
         <div class="ar">${esc(vtext(a))}</div>${pr.fr ? `<div class="muted">${esc(a.fr)}</div>` : ''}</div>`).join('')}
       <p class="src">${esc(SOURCE_CORAN)}</p></div>
     <div class="lfoot"><div class="in"><button class="btn" onclick="endRead(${n})">Terminer la lecture</button></div></div></div>`;
+  if (at && $('v' + at)) $('v' + at).scrollIntoView({ block: 'center' });
 }
 function endRead(n) {
   const mins = Math.max(1, Math.round((Date.now() - readStart) / 60000));
@@ -430,10 +598,42 @@ function readHadith() {
   save(); render(); toast(`+${XP.hadith} XP`);
 }
 
+/* Onglet Chercher : recherche dans les textes vérifiés de l'appli, sans réponse générée */
+let lastQ = '';
+const fold = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, ' ');
+function viewSearch() {
+  setTimeout(() => { if (lastQ) doSearch(); }, 0);
+  return `<h2>Chercher</h2>
+    <p class="muted">Cherche un mot dans le Coran (traduction ou texte arabe) et dans les hadiths de l'appli. Les résultats sont les textes eux-mêmes avec leur source, rien n'est rédigé ni résumé. Pour une question de pratique, se référer à un savant malékite.</p>
+    <form class="search" onsubmit="event.preventDefault();lastQ=$('q').value;doSearch()"><input id="q" type="search" placeholder="ex. patience, الصبر, parents" value="${esc(lastQ)}" autocomplete="off"><button class="btn" type="submit">Chercher</button></form>
+    <div id="res"></div>`;
+}
+async function doSearch() {
+  const q = lastQ.trim(), res = $('res'); if (!res) return;
+  const ar = /[\u0600-\u06FF]/.test(q);
+  const terms = ar ? arNorm(q) : fold(q).split(/[^a-z0-9]+/).filter(w => w.length > 1);
+  if (!terms.length || q.length < 2) { res.innerHTML = '<p class="muted">Écris au moins un mot de deux lettres.</p>'; return; }
+  res.innerHTML = '<p class="muted">Recherche…</p>';
+  let idx;
+  try { idx = await getJSON('data/coran/recherche.json'); } catch (e) { res.innerHTML = '<p class="bad">Index de recherche introuvable (connexion ?).</p>'; return; }
+  if (!idx.folded) idx.folded = idx.versets.map(x => fold(x[2]));
+  const hit = (txt, normAr) => terms.every(t => ar ? normAr.includes(t) : txt.includes(t));
+  const vs = idx.versets.filter((x, i) => hit(idx.folded[i], x[3]));
+  const kid = (me() || {}).age < 14;
+  const hs = data.hadiths.filter(h => !(kid && h.accompagnement) && hit(fold(h.fr), arNorm(h.ar).join(' ')));
+  const nameOf = n => data.surahs.find(x => x.number === n).name_fr;
+  const shorten = t => t.length > 320 ? t.slice(0, 320) + ' …' : t;
+  if (lastQ.trim() !== q) return;
+  res.innerHTML = `<p class="muted">${vs.length} verset(s), ${hs.length} hadith(s).</p>
+    ${vs.length ? `<div class="card"><h3>Coran</h3>${vs.slice(0, 30).map(x => `<div class="item" style="display:block"><div class="row"><b>${esc(nameOf(x[0]))} ${x[0]}:${x[1]}</b><button class="link" onclick="readSurah(${x[0]},${x[1]})">Lire</button></div><div>${esc(x[2])}</div></div>`).join('')}
+      ${vs.length > 30 ? '<p class="muted small">Seuls les 30 premiers versets sont affichés. Ajoute un mot pour préciser.</p>' : ''}<p class="src">${esc(SOURCE_CORAN)}</p></div>` : ''}
+    ${hs.length ? `<div class="card"><h3>Hadiths</h3>${hs.slice(0, 20).map(h => `<div class="item" style="display:block"><div>${esc(shorten(h.fr))}</div><p class="src">${esc(h.recueil)}, n° ${esc(h.numero)} · grade : ${esc(h.grade.valeur)}${h.grade.par ? ' (' + esc(h.grade.par) + ')' : ''}</p></div>`).join('')}</div>` : ''}`;
+}
+
 /* Onglet Profil */
 function viewMe() {
   const p = me(), pr = prefs(), done = data.surahs.filter(s => isValid(s.number)).length;
-  const lessons = Object.values(state.lessons[cur] || {}).reduce((t, x) => t + x, 0);
+  const lessons = mine(cur).filter(l => l.type === 'lesson').length;
   const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
   const xs = days.map(d => xpOn(cur, dayKey(d))), max = Math.max(pr.goal, ...xs);
   const stat = (ico, v, l) => `<div class="tile-stat">${ico}<div><b>${v}</b><span class="muted">${l}</span></div></div>`;
@@ -444,13 +644,174 @@ function viewMe() {
     <div class="card"><h3>7 derniers jours</h3><div class="week">${xs.map((x, i) => `<div class="d"><span>${x}</span><div class="b ${x >= pr.goal ? 'hit' : ''}" style="height:${Math.round(70 * x / max)}%"></div><span>${days[i].toLocaleDateString('fr-FR', { weekday: 'narrow' })}</span></div>`).join('')}</div></div>
     <div class="card"><h3>Objectif quotidien</h3><div class="goals">${GOALS.map(([g, l]) => `<button class="goal-opt ${pr.goal === g ? 'on' : ''}" onclick="prefs().goal=${g};save();render()"><span>${l}</span><span>${g} XP par jour</span></button>`).join('')}</div>
       <p class="muted" style="margin-top:10px">Une leçon rapporte ${XP.lesson} XP (+${XP.perfect} sans faute), un vérificateur réussi ${XP.quizPass} XP, le hadith du jour ${XP.hadith} XP.</p></div>
+    ${levelCard()}${reminderCard()}
     <div class="card"><h3>Réglages</h3>
       <label class="switch"><input type="checkbox" ${pr.fr ? 'checked' : ''} onchange="prefs().fr=this.checked;save()"> Afficher la traduction</label>
       <label class="switch"><input type="checkbox" ${pr.uthmani ? 'checked' : ''} onchange="prefs().uthmani=this.checked;save()"> Texte uthmani</label>
-      ${reciters.length ? `<p class="muted" style="margin:10px 0 6px">Récitateur</p><select onchange="prefs().reciter=this.value;save()">${reciters.map(r => `<option value="${esc(r.id)}" ${pr.reciter === r.id ? 'selected' : ''}>${esc(r.nom)}</option>`).join('')}</select>` : ''}</div>
+      ${SR ? `<label class="switch"><input type="checkbox" ${pr.voice ? 'checked' : ''} onchange="prefs().voice=this.checked;save();render()"> Réciter à voix haute (micro)</label>
+        <p class="muted small">Ta voix est envoyée au service de reconnaissance du navigateur (Google sur Chrome, Apple sur Safari) pour être transcrite. Seuls les mots sont vérifiés, pas le tajwid.</p>`
+        : '<p class="muted small">Récitation à voix haute : non disponible sur ce navigateur. Essaie Chrome sur Android ou Safari sur iPhone.</p>'}
+      ${reciters.length ? `<p class="muted" style="margin:10px 0 6px">Récitateur</p><select onchange="prefs().reciter=this.value;save()">${reciters.map(r => `<option value="${esc(r.id)}" ${pr.reciter === r.id ? 'selected' : ''}>${esc(r.nom)}</option>`).join('')}</select>` : ''}<button class="btn ghost" style="margin-top:12px" onclick="audioDiag()">Tester l'audio</button></div>
+    ${backupCard()}
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
     <button class="btn ghost" onclick="switchProfile()">Changer de profil</button>
     <p class="src">${esc(SOURCE_CORAN)}</p>`;
+}
+
+/* Niveau du profil */
+function setLevel(l) {
+  const p = prefs(); p.level = l;
+  if (l === 'perso') p.custom = cleanCustom(p.custom || LEVELS.standard);
+  save(); render();
+}
+function setCustom(k, v) { const p = prefs(); p.custom = cleanCustom(Object.assign({}, p.custom, { [k]: v })); save(); render(); }
+function levelCard() {
+  const p = prefs(), c = lv();
+  const desc = x => `${x.chunk} verset(s) par leçon, ${x.maxEx} exercices au plus, vérificateur de ${x.quizN} questions, seuil ${Math.round(x.pass * 100)} %${x.voir ? ', verset visible pendant la récitation' : ''}`;
+  const sel = (k, vals, f) => `<select onchange="setCustom('${k}',+this.value)">${vals.map(v => `<option value="${v}" ${c[k] === v ? 'selected' : ''}>${f(v)}</option>`).join('')}</select>`;
+  const range = (a, b, st = 1) => { const r = []; for (let x = a; x <= b + 1e-9; x += st) r.push(Math.round(x * 100) / 100); return r; };
+  return `<div class="card"><h3>Niveau</h3><div class="goals">
+    ${Object.entries(LEVELS).map(([k, x]) => `<button class="goal-opt ${p.level === k ? 'on' : ''}" onclick="setLevel('${k}')"><span>${x.nom}</span><span class="muted small" style="text-align:right;max-width:60%">${x.chunk} versets par leçon · seuil ${Math.round(x.pass * 100)} %</span></button>`).join('')}
+    <button class="goal-opt ${p.level === 'perso' ? 'on' : ''}" onclick="setLevel('perso')"><span>Personnalisé</span><span class="muted small">à régler</span></button></div>
+    ${p.level === 'perso' ? `<div class="form custom">
+      <label>Versets par leçon ${sel('chunk', range(1, 10), v => v)}</label>
+      <label>Exercices par leçon (au plus) ${sel('maxEx', range(4, 20, 2), v => v)}</label>
+      <label>Questions du vérificateur ${sel('quizN', range(5, 20, 5), v => v)}</label>
+      <label>Seuil de réussite ${sel('pass', range(0.6, 1, 0.05), v => Math.round(v * 100) + ' %')}</label>
+      <label class="switch"><input type="checkbox" ${c.voir ? 'checked' : ''} onchange="setCustom('voir',this.checked)"> Verset visible pendant la récitation</label></div>` : ''}
+    <p class="muted small" style="margin-top:10px">${esc(desc(c))}. Changer de niveau garde les versets déjà appris.</p></div>`;
+}
+
+/* Rappel quotidien : ajouté à l'agenda du téléphone, qui se charge de la notification (aucun serveur) */
+const appUrl = () => location.origin + location.pathname;
+function reminderStart() {
+  const [h, m] = prefs().reminder.split(':').map(Number), d = new Date();
+  d.setHours(h, m, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1);
+  return d;
+}
+// Heure locale « flottante » : l'agenda l'applique dans le fuseau du téléphone
+const icsTime = d => { const f = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${f(d.getMonth() + 1)}${f(d.getDate())}T${f(d.getHours())}${f(d.getMinutes())}00`; };
+const REM_TITLE = 'Éducateur coranique : leçon du jour';
+function icsReminder() {
+  const now = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Educateur coranique//FR', 'BEGIN:VEVENT', `UID:rappel-${cur}@educateur-coranique`, `DTSTAMP:${now}`,
+    `DTSTART:${icsTime(reminderStart())}`, 'DURATION:PT15M', 'RRULE:FREQ=DAILY', `SUMMARY:${REM_TITLE}`, `DESCRIPTION:${appUrl()}`, `URL:${appUrl()}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', `DESCRIPTION:${REM_TITLE}`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' })); a.download = 'rappel-educateur-coranique.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function googleReminder() {
+  const st = reminderStart(), end = new Date(st.getTime() + 15 * 60000);
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: REM_TITLE, details: appUrl(), dates: icsTime(st) + '/' + icsTime(end), recur: 'RRULE:FREQ=DAILY' });
+  window.open('https://calendar.google.com/calendar/render?' + q, '_blank');
+}
+function reminderCard() {
+  return `<div class="card"><h3>Rappel quotidien</h3>
+    <p class="muted">L'appli ne peut pas envoyer de notification quand elle est fermée sans serveur. Le rappel est donc ajouté à l'agenda du téléphone, qui sonnera chaque jour.</p>
+    <label class="muted">Heure <input type="time" value="${esc(prefs().reminder)}" onchange="if(this.value){prefs().reminder=this.value;save()}"></label>
+    <button class="btn blue" style="margin-top:12px" onclick="icsReminder()">Ajouter à l'agenda (iPhone, Samsung, Outlook)</button>
+    <button class="btn ghost" onclick="googleReminder()">Ajouter à Google Agenda</button></div>`;
+}
+
+/* Sauvegarde : un fichier à transférer d'un appareil à l'autre, fusionné à l'import */
+const FORMAT = 'educateur-coranique';
+function backupFile() {
+  const name = `educateur-coranique-${dayKey(Date.now())}.json`;
+  const body = JSON.stringify({ format: FORMAT, version: 1, exportedAt: new Date().toISOString(), data: state });
+  return new File([body], name, { type: 'application/json' });
+}
+const canShareFile = () => { try { return !!(navigator.canShare && navigator.canShare({ files: [backupFile()] })); } catch (e) { return false; } };
+function exported() { state.lastExport = Date.now(); save(); if (cur && tab === 'me' && !L) render(); }
+function downloadBackup() {
+  const f = backupFile(), a = document.createElement('a');
+  a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  exported(); toast('Fichier enregistré dans les téléchargements.');
+}
+function shareBackup() {
+  navigator.share({ files: [backupFile()], title: 'Sauvegarde Éducateur coranique' }).then(exported).catch(e => { if (e.name !== 'AbortError') downloadBackup(); });
+}
+// Le fichier vient de l'extérieur : on ne garde que des champs attendus, aux types attendus
+const num = (x, d = 0) => (Number.isFinite(+x) ? +x : d);
+const safeId = x => (typeof x === 'string' && /^[a-z0-9]{1,20}$/i.test(x) ? x : null);
+const LOG_TYPES = ['lesson', 'quiz', 'study', 'hadith', 'recite'];
+function cleanBackup(d) {
+  if (!d || !Array.isArray(d.profiles) || !Array.isArray(d.log)) throw new Error('format');
+  const profiles = d.profiles.filter(p => p && safeId(p.id) && typeof p.name === 'string').map(p => ({ id: p.id, name: p.name.slice(0, 30), age: num(p.age, 0), createdAt: num(p.createdAt) }));
+  const ids = new Set(profiles.map(p => p.id));
+  const log = d.log.filter(l => l && safeId(l.id) && ids.has(l.profile) && LOG_TYPES.includes(l.type)).map(l => {
+    const o = { id: l.id, profile: l.profile, ts: num(l.ts), type: l.type, xp: num(l.xp), minutes: num(l.minutes) };
+    ['surah', 'lesson', 'score'].forEach(k => { if (l[k] != null) o[k] = num(l[k]); });
+    if (l.pass != null) o.pass = !!l.pass;
+    if (typeof l.hadith === 'string') o.hadith = l.hadith.slice(0, 40);
+    return o;
+  });
+  const perProfile = (obj, f) => Object.fromEntries(Object.entries(obj || {}).filter(([pid]) => ids.has(pid)).map(([pid, v]) => [pid, f(v || {})]));
+  const bySurah = (m, f) => Object.fromEntries(Object.entries(m).filter(([n]) => num(n) >= 1 && num(n) <= 114).map(([n, e]) => [n, f(e)]));
+  return {
+    profiles, log,
+    memo: perProfile(d.memo, m => bySurah(m, e => ({ validated: !!(e && e.validated), box: num(e && e.box), due: num(e && e.due), ...(e && e.validatedAt ? { validatedAt: num(e.validatedAt) } : {}) }))),
+    vdone: perProfile(d.vdone || Object.fromEntries(Object.entries(d.lessons || {}).map(([pid, m]) => [pid, Object.fromEntries(Object.entries(m || {}).map(([n, x]) => [n, num(x) * 5]))])), m => bySurah(m, x => num(x))),
+    prefs: perProfile(d.prefs, p => ({ fr: p.fr !== false, uthmani: !!p.uthmani, voice: !!p.voice, reciter: typeof p.reciter === 'string' ? p.reciter.slice(0, 30) : 'husary', goal: GOALS.some(([g]) => g === p.goal) ? p.goal : 20,
+      level: LEVELS[p.level] || p.level === 'perso' ? p.level : 'standard', custom: cleanCustom(p.custom), reminder: /^\d\d:\d\d$/.test(p.reminder) ? p.reminder : '18:00' })),
+    pin: typeof d.pin === 'string' && /^[0-9a-f]{64}$/.test(d.pin) ? d.pin : null,
+  };
+}
+function cleanCustom(c) {
+  const o = {};
+  for (const [k, [lo, hi]] of Object.entries(CUSTOM)) o[k] = Math.min(hi, Math.max(lo, num(c && c[k], LEVELS.standard[k])));
+  o.voir = !!(c && c.voir);
+  return o;
+}
+// Fusion : rien n'est effacé, chaque activité n'est comptée qu'une fois, la progression la plus avancée l'emporte
+function mergeState(a, b) {
+  const out = JSON.parse(JSON.stringify(a));
+  const pids = new Set(out.profiles.map(p => p.id)), lids = new Set(out.log.map(l => l.id));
+  b.profiles.forEach(p => { if (!pids.has(p.id)) { out.profiles.push(p); pids.add(p.id); } });
+  b.log.forEach(l => { if (!lids.has(l.id)) { out.log.push(l); lids.add(l.id); } });
+  out.log.sort((x, y) => x.ts - y.ts);
+  const rank = e => [e.validated ? 1 : 0, e.due];
+  for (const [pid, m] of Object.entries(b.memo)) {
+    const o = out.memo[pid] = out.memo[pid] || {};
+    for (const [n, e] of Object.entries(m)) {
+      const c = o[n], at = [c && c.validatedAt, e.validatedAt].filter(Boolean);
+      if (!c || rank(e)[0] > rank(c)[0] || (rank(e)[0] === rank(c)[0] && rank(e)[1] > rank(c)[1])) o[n] = Object.assign({}, e);
+      if (at.length) o[n].validatedAt = Math.min(...at);
+    }
+  }
+  for (const [pid, m] of Object.entries(b.vdone)) {
+    const o = out.vdone[pid] = out.vdone[pid] || {};
+    for (const [n, x] of Object.entries(m)) o[n] = Math.max(o[n] || 0, x);
+  }
+  for (const [pid, p] of Object.entries(b.prefs)) if (!out.prefs[pid]) out.prefs[pid] = p;
+  out.pin = out.pin || b.pin;
+  return out;
+}
+function importBackup(input) {
+  const f = input.files && input.files[0]; input.value = '';
+  if (!f) return;
+  f.text().then(t => {
+    let inc;
+    try { const j = JSON.parse(t); if (j.format !== FORMAT) throw new Error('format'); inc = cleanBackup(j.data); }
+    catch (e) { toast('Ce fichier n\'est pas une sauvegarde de l\'appli.'); return; }
+    const merged = mergeState(state, inc);
+    const np = merged.profiles.length - state.profiles.length, nl = merged.log.length - state.log.length;
+    if (!confirm(`Importer cette sauvegarde ?\n${inc.profiles.length} profil(s) dans le fichier, dont ${np} nouveau(x) sur cet appareil.\n${nl} activité(s) ajoutée(s). Rien n'est effacé.`)) return;
+    merged.lastExport = state.lastExport; state = merged; save();
+    toast('Sauvegarde importée.');
+    route();
+  });
+}
+const importBtn = (label = 'Importer une sauvegarde') => `<label class="btn ghost file-btn">${label}<input type="file" accept="application/json,.json" onchange="importBackup(this)"></label>`;
+function backupCard() {
+  const last = state.lastExport ? new Date(state.lastExport).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : null;
+  return `<div class="card"><h3>Sauvegarde et autres appareils</h3>
+    <p class="muted">La progression reste sur cet appareil. Pour la retrouver ailleurs (nouveau téléphone, tablette, appareil du parent), envoie-toi le fichier de sauvegarde puis importe-le sur l'autre appareil. L'import fusionne : rien n'est effacé.</p>
+    <p class="muted small">${last ? 'Dernière sauvegarde : ' + last + '.' : 'Aucune sauvegarde faite depuis cet appareil.'} Le fichier contient les prénoms, âges et l'historique de tous les profils de cet appareil.</p>
+    ${canShareFile() ? '<button class="btn blue" onclick="shareBackup()">Envoyer la sauvegarde</button>' : ''}
+    <button class="btn ${canShareFile() ? 'ghost' : 'blue'}" onclick="downloadBackup()">Télécharger le fichier</button>
+    ${importBtn()}</div>`;
 }
 
 /* Espace parent */
@@ -478,6 +839,7 @@ function logLine(l) {
   const s = data.surahs.find(x => x.number === l.surah), name = esc(s ? s.name_fr : l.surah || '');
   const what = l.type === 'quiz' ? `Vérificateur ${l.score} %${l.pass ? ' (validé)' : ' (échec)'} · ${name}`
     : l.type === 'lesson' ? `Leçon ${l.lesson} · ${name} · ${l.score} %`
+    : l.type === 'recite' ? `Récitation · ${name} · ${l.score} % des mots`
     : l.type === 'hadith' ? 'Hadith du jour lu' : `Lecture · ${name}`;
   return `<div class="muted small">${new Date(l.ts).toLocaleDateString('fr-FR')} · ${what} · ${l.minutes || 0} min${l.xp ? ' · +' + l.xp + ' XP' : ''}</div>`;
 }
@@ -498,6 +860,6 @@ function feed() {
       ${quizzes.length ? `<p class="muted" style="margin-top:8px">Moyenne des vérifications : ${Math.round(quizzes.reduce((t, l) => t + l.score, 0) / quizzes.length)} %</p>` : ''}</div>`;
   }).join('') || '<p>Aucun profil.</p>';
   $('app').innerHTML = `<div class="wrap" style="padding-bottom:40px"><div class="row" style="justify-content:flex-start"><button class="x" onclick="parentBack()" aria-label="Retour">${I.back(28)}</button><h2 style="margin:0">Suivi des profils</h2></div><div style="margin-top:16px">${cards}</div>
-    <p class="muted">Les données sont stockées sur cet appareil. Le suivi à distance arrive avec la synchronisation en ligne.</p></div>`;
+    <p class="muted">Les données sont stockées sur cet appareil. Pour suivre un enfant qui apprend sur un autre appareil, demande-lui d'envoyer sa sauvegarde (Profil) et importe-la ici.</p>${importBtn()}</div>`;
 }
 boot();
