@@ -10,12 +10,15 @@ const LEVELS = {
 };
 const CUSTOM = { chunk: [1, 10], maxEx: [4, 20], quizN: [5, 20], pass: [0.6, 1] };
 const XP = { lesson: 10, perfect: 5, practice: 5, quizPass: 20, quizTry: 5, hadith: 5, recite: 10 };
+const PREF_DEFAULTS = { fr: true, uthmani: false, reciter: 'husary', goal: 20, voice: false, level: 'standard', reminder: '18:00' };
 const GOALS = [[10, 'Détendu'], [20, 'Normal'], [30, 'Sérieux'], [50, 'Intense']];
 const COLORS = [['#58cc02', '#58a700'], ['#ce82ff', '#a568cc'], ['#1cb0f6', '#1899d6'], ['#ff9600', '#e08600'], ['#ff86d0', '#e070b5'], ['#2bc4a6', '#1fa088']];
 const ZIG = [0, 44, 66, 44, 0, -44, -66, -44];
 const SOURCE_CORAN = 'Texte Hafs : Complexe du Roi Fahd et Tanzil. Traduction (sens approché) : Hamidullah. Détails dans data/CONTENU.md';
 let data = null;
 let state = load();
+let prefSnap = {};  // réglages tels qu'au dernier enregistrement, pour dater chaque changement
+snapPrefs(false);
 let cur = null;
 let tab = 'learn';
 let shown = 0;   // étapes affichées en plus sur le chemin
@@ -34,7 +37,16 @@ function load() {
   delete s.lessons;
   return s;
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function save() { snapPrefs(true); persist(); syncSoon(); }
+// Un réglage modifié reçoit la date du changement : à la synchronisation, le plus récent l'emporte
+function snapPrefs(stamp) {
+  for (const [pid, p] of Object.entries(state.prefs)) {
+    const { at, ...rest } = p, j = JSON.stringify(Object.assign({}, PREF_DEFAULTS, rest));
+    if (stamp && prefSnap[pid] !== undefined && prefSnap[pid] !== j) p.at = Date.now();
+    prefSnap[pid] = j;
+  }
+}
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -113,12 +125,15 @@ async function boot() {
   if (!state.profiles.find(p => p.id === cur)) cur = null;
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && L) { const b = $('cta'); if (b && !b.disabled) b.click(); } });
   route();
+  syncNow();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
+  window.addEventListener('online', () => syncNow());
 }
 
 /* Profil courant et calculs de progression */
 const me = () => state.profiles.find(p => p.id === cur);
 const memo = () => (state.memo[cur] = state.memo[cur] || {});
-const prefs = () => (state.prefs[cur] = Object.assign({ fr: true, uthmani: false, reciter: 'husary', goal: 20, voice: false, level: 'standard', reminder: '18:00' }, state.prefs[cur]));
+const prefs = () => (state.prefs[cur] = Object.assign({}, PREF_DEFAULTS, state.prefs[cur]));
 const lv = () => { const p = prefs(); return p.level === 'perso' ? Object.assign({}, LEVELS.standard, p.custom, { nom: 'Personnalisé' }) : LEVELS[p.level] || LEVELS.standard; };
 const countOf = n => data.surahs.find(x => x.number === n).count;
 const nLessons = n => Math.ceil(countOf(n) / lv().chunk);
@@ -178,6 +193,7 @@ function profiles() {
     <div class="card"><h3>Nouveau profil</h3><div class="form">
       <div class="two"><input id="newname" placeholder="Prénom" maxlength="30"><input id="newage" type="number" min="4" max="99" placeholder="Âge"></div>
       <button class="btn" onclick="addProfile()">Ajouter</button></div></div>
+    ${syncCard()}
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
     ${importBtn('Reprendre une sauvegarde')}
     <p class="src">${esc(SOURCE_CORAN)}</p></div>`;
@@ -652,7 +668,7 @@ function viewMe() {
         <p class="muted small">Ta voix est envoyée au service de reconnaissance du navigateur (Google sur Chrome, Apple sur Safari) pour être transcrite. Seuls les mots sont vérifiés, pas le tajwid.</p>`
         : '<p class="muted small">Récitation à voix haute : non disponible sur ce navigateur. Essaie Chrome sur Android ou Safari sur iPhone.</p>'}
       ${reciters.length ? `<p class="muted" style="margin:10px 0 6px">Récitateur</p><select onchange="prefs().reciter=this.value;save()">${reciters.map(r => `<option value="${esc(r.id)}" ${pr.reciter === r.id ? 'selected' : ''}>${esc(r.nom)}</option>`).join('')}</select>` : ''}<button class="btn ghost" style="margin-top:12px" onclick="audioDiag()">Tester l'audio</button></div>
-    ${backupCard()}
+    ${syncCard()}${backupCard()}
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
     <button class="btn ghost" onclick="switchProfile()">Changer de profil</button>
     <p class="src">${esc(SOURCE_CORAN)}</p>`;
@@ -754,8 +770,8 @@ function cleanBackup(d) {
     memo: perProfile(d.memo, m => bySurah(m, e => ({ validated: !!(e && e.validated), box: num(e && e.box), due: num(e && e.due), ...(e && e.validatedAt ? { validatedAt: num(e.validatedAt) } : {}) }))),
     vdone: perProfile(d.vdone || Object.fromEntries(Object.entries(d.lessons || {}).map(([pid, m]) => [pid, Object.fromEntries(Object.entries(m || {}).map(([n, x]) => [n, num(x) * 5]))])), m => bySurah(m, x => num(x))),
     prefs: perProfile(d.prefs, p => ({ fr: p.fr !== false, uthmani: !!p.uthmani, voice: !!p.voice, reciter: typeof p.reciter === 'string' ? p.reciter.slice(0, 30) : 'husary', goal: GOALS.some(([g]) => g === p.goal) ? p.goal : 20,
-      level: LEVELS[p.level] || p.level === 'perso' ? p.level : 'standard', custom: cleanCustom(p.custom), reminder: /^\d\d:\d\d$/.test(p.reminder) ? p.reminder : '18:00' })),
-    pin: typeof d.pin === 'string' && /^[0-9a-f]{64}$/.test(d.pin) ? d.pin : null,
+      level: LEVELS[p.level] || p.level === 'perso' ? p.level : 'standard', custom: cleanCustom(p.custom), reminder: /^\d\d:\d\d$/.test(p.reminder) ? p.reminder : '18:00', at: num(p.at) })),
+    pin: typeof d.pin === 'string' && /^[0-9a-f]{64}$/.test(d.pin) ? d.pin : null, pinAt: num(d.pinAt),
   };
 }
 function cleanCustom(c) {
@@ -770,7 +786,9 @@ function mergeState(a, b) {
   const pids = new Set(out.profiles.map(p => p.id)), lids = new Set(out.log.map(l => l.id));
   b.profiles.forEach(p => { if (!pids.has(p.id)) { out.profiles.push(p); pids.add(p.id); } });
   b.log.forEach(l => { if (!lids.has(l.id)) { out.log.push(l); lids.add(l.id); } });
-  out.log.sort((x, y) => x.ts - y.ts);
+  // Ordre stable quel que soit l'appareil, pour que deux appareils à jour aient exactement les mêmes données
+  out.profiles.sort((x, y) => x.createdAt - y.createdAt || (x.id < y.id ? -1 : 1));
+  out.log.sort((x, y) => x.ts - y.ts || (x.id < y.id ? -1 : 1));
   const rank = e => [e.validated ? 1 : 0, e.due];
   for (const [pid, m] of Object.entries(b.memo)) {
     const o = out.memo[pid] = out.memo[pid] || {};
@@ -784,8 +802,10 @@ function mergeState(a, b) {
     const o = out.vdone[pid] = out.vdone[pid] || {};
     for (const [n, x] of Object.entries(m)) o[n] = Math.max(o[n] || 0, x);
   }
-  for (const [pid, p] of Object.entries(b.prefs)) if (!out.prefs[pid]) out.prefs[pid] = p;
-  out.pin = out.pin || b.pin;
+  for (const [pid, p] of Object.entries(b.prefs)) if (!out.prefs[pid] || (p.at || 0) > (out.prefs[pid].at || 0)) out.prefs[pid] = p;
+  // Code parent : le plus récent l'emporte (à égalité, un choix fixe pour que tous les appareils tombent d'accord)
+  const pa = [out.pinAt || 0, out.pin || ''], pb = [b.pinAt || 0, b.pin || ''];
+  if (b.pin && (!out.pin || pb[0] > pa[0] || (pb[0] === pa[0] && pb[1] > pa[1]))) { out.pin = b.pin; out.pinAt = b.pinAt || 0; }
   return out;
 }
 function importBackup(input) {
@@ -806,12 +826,136 @@ function importBackup(input) {
 const importBtn = (label = 'Importer une sauvegarde') => `<label class="btn ghost file-btn">${label}<input type="file" accept="application/json,.json" onchange="importBackup(this)"></label>`;
 function backupCard() {
   const last = state.lastExport ? new Date(state.lastExport).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : null;
-  return `<div class="card"><h3>Sauvegarde et autres appareils</h3>
-    <p class="muted">La progression reste sur cet appareil. Pour la retrouver ailleurs (nouveau téléphone, tablette, appareil du parent), envoie-toi le fichier de sauvegarde puis importe-le sur l'autre appareil. L'import fusionne : rien n'est effacé.</p>
+  return `<div class="card"><h3>${linked() ? 'Sauvegarde dans un fichier' : 'Sauvegarde et autres appareils'}</h3>
+    <p class="muted">${linked() ? 'En plus de la synchronisation, garde de temps en temps une copie dans un fichier : elle ne dépend d\'aucun service en ligne.'
+      : 'La progression reste sur cet appareil. Pour la retrouver ailleurs (nouveau téléphone, tablette, appareil du parent), envoie-toi le fichier de sauvegarde puis importe-le sur l\'autre appareil.'} L'import fusionne : rien n'est effacé.</p>
     <p class="muted small">${last ? 'Dernière sauvegarde : ' + last + '.' : 'Aucune sauvegarde faite depuis cet appareil.'} Le fichier contient les prénoms, âges et l'historique de tous les profils de cet appareil.</p>
     ${canShareFile() ? '<button class="btn blue" onclick="shareBackup()">Envoyer la sauvegarde</button>' : ''}
     <button class="btn ${canShareFile() ? 'ghost' : 'blue'}" onclick="downloadBackup()">Télécharger le fichier</button>
     ${importBtn()}</div>`;
+}
+
+/* Synchronisation : un compte (e-mail + code reçu) = un espace famille sur Supabase.
+   L'appareil garde tout en local et reste utilisable hors ligne ; à chaque échange, appareil et serveur sont fusionnés (rien n'est effacé). */
+const CFG = window.EC_CONFIG || {};
+const SYNC_ON = !!(CFG.supabaseUrl && CFG.supabaseKey && /^https:\/\//.test(CFG.supabaseUrl));
+const SKEY = 'ec.sync';
+let sess = (() => { try { return JSON.parse(localStorage.getItem(SKEY)); } catch (e) { return null; } })();
+let syncing = null, again = false, syncTimer = null, otpEmail = null;
+const saveSess = () => { try { sess ? localStorage.setItem(SKEY, JSON.stringify(sess)) : localStorage.removeItem(SKEY); } catch (e) {} };
+const linked = () => !!(SYNC_ON && sess && sess.refresh);
+// Clés triées : deux contenus identiques donnent le même texte, quel que soit l'appareil
+const canon = x => Array.isArray(x) ? '[' + x.map(canon).join() + ']' : x && typeof x === 'object' ? '{' + Object.keys(x).sort().map(k => JSON.stringify(k) + ':' + canon(x[k])).join() + '}' : JSON.stringify(x);
+
+async function sb(path, opt = {}, auth = true) {
+  const headers = Object.assign({ apikey: CFG.supabaseKey, 'content-type': 'application/json' }, auth ? { authorization: 'Bearer ' + sess.access } : {}, opt.headers);
+  let r;
+  try { r = await fetch(CFG.supabaseUrl.replace(/\/+$/, '') + path, Object.assign({}, opt, { headers })); }
+  catch (e) { const x = new Error('offline'); x.offline = true; throw x; }
+  const t = await r.text(); let j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {}
+  if (!r.ok) { const x = new Error((j && (j.msg || j.message || j.error_description)) || 'HTTP ' + r.status); x.status = r.status; throw x; }
+  return j;
+}
+function authed(j) {
+  sess = { email: (j.user && j.user.email) || (sess && sess.email), access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (j.expires_in || 3600) * 1000, at: sess && sess.at };
+  saveSess();
+}
+async function freshToken() {
+  if (sess.exp - Date.now() > 60000) return;
+  try { authed(await sb('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: sess.refresh }) }, false)); }
+  catch (e) { if (e.status >= 400 && e.status < 500) { sess.lost = true; saveSess(); } throw e; }
+}
+// Remplace l'état local par la fusion, sans redater les réglages ni relancer une synchro
+function adopt(merged) {
+  const before = canon(cleanBackup(state));
+  merged.lastExport = state.lastExport; state = merged;
+  snapPrefs(false); persist();
+  if (canon(cleanBackup(state)) !== before) redraw();
+}
+function redraw() {
+  if (L || (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))) return;
+  if (parentView) { if (parentView === 'feed') feed(); return; }
+  cur ? render() : profiles();
+}
+function syncSoon(ms = 3000) { if (!linked()) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, ms); }
+function syncNow() {
+  if (!linked() || sess.lost) return Promise.resolve();
+  if (syncing) { again = true; return syncing; }
+  syncing = (async () => {
+    const c0 = $('synccard'); if (c0) c0.querySelector('.small').textContent = 'Synchronisation en cours…';
+    try {
+      await freshToken();
+      for (let i = 0; i < 5; i++) {
+        const [row] = await sb('/rest/v1/espaces?select=id,rev,data');
+        if (!row) {
+          // Premier appareil connecté : il crée l'espace avec ce qu'il a
+          try { await sb('/rest/v1/espaces', { method: 'POST', headers: { prefer: 'return=minimal' }, body: JSON.stringify({ data: cleanBackup(state), rev: 1 }) }); break; }
+          catch (e) { if (e.status === 409) continue; throw e; }
+        }
+        let remote = null; try { remote = cleanBackup(row.data); } catch (e) {}
+        if (remote) adopt(mergeState(state, remote));
+        const out = cleanBackup(state);
+        if (remote && canon(out) === canon(remote)) break;
+        // Écriture seulement si personne n'a écrit depuis la lecture ; sinon on relit et on refusionne
+        const done = await sb(`/rest/v1/espaces?id=eq.${encodeURIComponent(row.id)}&rev=eq.${row.rev}`, { method: 'PATCH', headers: { prefer: 'return=representation' }, body: JSON.stringify({ data: out, rev: row.rev + 1 }) });
+        if (done && done.length) break;
+      }
+      sess.at = Date.now(); sess.err = null;
+    } catch (e) {
+      if (sess) sess.err = e.offline ? 'offline' : 'server';
+      if (sess && e.status === 401) sess.exp = 0;  // jeton refusé : il sera renouvelé à la prochaine synchro
+    }
+    saveSess();
+    syncing = null;
+    const card = $('synccard'); if (card) card.outerHTML = syncCard();
+    if (again) { again = false; syncSoon(500); }
+  })();
+  return syncing;
+}
+
+async function sendCode() {
+  const email = $('semail').value.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('Adresse e-mail invalide.'); return; }
+  try {
+    await sb('/auth/v1/otp', { method: 'POST', body: JSON.stringify({ email, create_user: true }) }, false);
+    otpEmail = email; $('synccard').outerHTML = syncCard();
+    toast('Code envoyé. Regarde ta boîte mail (et les indésirables).');
+  } catch (e) { toast(e.offline ? 'Pas de connexion internet.' : e.status === 429 ? 'Trop de demandes : réessaie dans une heure.' : 'Envoi impossible : ' + e.message); }
+}
+async function verifyCode() {
+  const token = $('scode').value.replace(/\s/g, '');
+  try { const j = await sb('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ type: 'email', email: otpEmail, token }) }, false); sess = null; authed(j); }
+  catch (e) { toast(e.offline ? 'Pas de connexion internet.' : 'Code incorrect ou expiré.'); return; }
+  otpEmail = null; toast('Connecté. Synchronisation…');
+  await syncNow();
+  cur ? render() : profiles();
+}
+function cancelCode() { otpEmail = null; $('synccard').outerHTML = syncCard(); }
+function logout() {
+  if (!confirm('Se déconnecter sur cet appareil ?\nLa progression reste sur l\'appareil et sur le compte.')) return;
+  const s = sess; sess = null; saveSess();
+  if (s && s.access) fetch(CFG.supabaseUrl.replace(/\/+$/, '') + '/auth/v1/logout', { method: 'POST', headers: { apikey: CFG.supabaseKey, authorization: 'Bearer ' + s.access } }).catch(() => {});
+  $('synccard').outerHTML = syncCard();
+}
+function syncCard() {
+  if (!SYNC_ON) return '';
+  const when = t => new Date(t).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  if (linked() && !sess.lost) {
+    const st = syncing ? 'Synchronisation en cours…' : sess.err === 'offline' ? 'Hors ligne : les progrès sont gardés sur l\'appareil et seront envoyés au retour du réseau.'
+      : sess.err === 'server' ? 'Serveur injoignable pour le moment : les progrès sont gardés sur l\'appareil.' : sess.at ? 'Synchronisé le ' + when(sess.at) + '.' : 'Pas encore synchronisé.';
+    return `<div class="card" id="synccard"><h3>Synchronisation</h3>
+      <p>Connecté avec <b>${esc(sess.email || '')}</b>. Tous les appareils connectés à ce compte partagent les mêmes profils.</p>
+      <p class="muted small">${st}</p>
+      <button class="btn blue" onclick="syncNow()">Synchroniser maintenant</button>
+      <button class="btn ghost" onclick="logout()">Se déconnecter de cet appareil</button></div>`;
+  }
+  const intro = sess && sess.lost ? '<p class="bad">La connexion a expiré : reconnecte-toi pour reprendre la synchronisation. Rien n\'est perdu sur cet appareil.</p>'
+    : '<p class="muted">Retrouve les mêmes profils sur tous les appareils de la famille (téléphone, tablette, appareil du parent). Utilise la même adresse e-mail sur chaque appareil : un code y est envoyé à chaque nouvelle connexion.</p>';
+  const form = otpEmail
+    ? `<p>Code envoyé à <b>${esc(otpEmail)}</b>.</p><div class="form"><input id="scode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code reçu par e-mail"><button class="btn blue" onclick="verifyCode()">Valider</button><button class="btn ghost" onclick="cancelCode()">Changer d'adresse</button></div>`
+    : `<div class="form"><input id="semail" type="email" autocomplete="email" placeholder="Adresse e-mail de la famille" value="${esc((sess && sess.email) || '')}"><button class="btn blue" onclick="sendCode()">Recevoir un code</button></div>`;
+  return `<div class="card" id="synccard"><h3>Synchroniser les appareils</h3>${intro}${form}
+    <p class="muted small">Sont stockés en ligne (Supabase) : l'adresse e-mail et le contenu de la sauvegarde (prénoms, âges, historique). Seul ce compte peut les lire.</p></div>`;
 }
 
 /* Espace parent */
@@ -819,9 +963,10 @@ async function sha(s) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
-function parentBack() { cur ? render() : profiles(); }
+let parentView = null;  // 'pin' ou 'feed' quand l'espace parent est ouvert
+function parentBack() { parentView = null; cur ? render() : profiles(); }
 function parentSpace() {
-  L = null;
+  L = null; parentView = 'pin';
   $('app').innerHTML = `<div class="wrap" style="padding-bottom:40px"><div class="row" style="justify-content:flex-start"><button class="x" onclick="parentBack()" aria-label="Retour">${I.back(28)}</button><h2 style="margin:0">Espace parent</h2></div>
     <div class="card center" style="margin-top:16px"><div style="color:var(--blue);display:flex;justify-content:center;margin-bottom:8px">${I.shield(48)}</div>
     <p class="muted">${state.pin ? 'Entre le code.' : 'Choisis un code à 4 chiffres au minimum.'}</p>
@@ -831,7 +976,7 @@ async function unlock() {
   const v = $('pin').value;
   if (v.length < 4) { $('msg').textContent = 'Code trop court.'; return; }
   const h = await sha(v);
-  if (!state.pin) { state.pin = h; save(); }
+  if (!state.pin) { state.pin = h; state.pinAt = Date.now(); save(); }
   else if (state.pin !== h) { $('msg').textContent = 'Code incorrect.'; return; }
   feed();
 }
@@ -844,6 +989,7 @@ function logLine(l) {
   return `<div class="muted small">${new Date(l.ts).toLocaleDateString('fr-FR')} · ${what} · ${l.minutes || 0} min${l.xp ? ' · +' + l.xp + ' XP' : ''}</div>`;
 }
 function feed() {
+  if (parentView !== 'feed') { parentView = 'feed'; syncNow(); }
   const now = Date.now();
   const cards = state.profiles.map(p => {
     const all = mine(p.id).sort((a, b) => b.ts - a.ts);
@@ -860,6 +1006,8 @@ function feed() {
       ${quizzes.length ? `<p class="muted" style="margin-top:8px">Moyenne des vérifications : ${Math.round(quizzes.reduce((t, l) => t + l.score, 0) / quizzes.length)} %</p>` : ''}</div>`;
   }).join('') || '<p>Aucun profil.</p>';
   $('app').innerHTML = `<div class="wrap" style="padding-bottom:40px"><div class="row" style="justify-content:flex-start"><button class="x" onclick="parentBack()" aria-label="Retour">${I.back(28)}</button><h2 style="margin:0">Suivi des profils</h2></div><div style="margin-top:16px">${cards}</div>
-    <p class="muted">Les données sont stockées sur cet appareil. Pour suivre un enfant qui apprend sur un autre appareil, demande-lui d'envoyer sa sauvegarde (Profil) et importe-la ici.</p>${importBtn()}</div>`;
+    <p class="muted">${linked() ? `Synchronisé avec le compte ${esc(sess.email || '')} : les profils de tous les appareils connectés à ce compte apparaissent ici.`
+      : SYNC_ON ? 'Pour suivre un enfant qui apprend sur un autre appareil, connecte les deux appareils au même compte (Profil > Synchroniser les appareils), ou importe ici sa sauvegarde.'
+      : 'Les données sont stockées sur cet appareil. Pour suivre un enfant qui apprend sur un autre appareil, demande-lui d\'envoyer sa sauvegarde (Profil) et importe-la ici.'}</p>${importBtn()}</div>`;
 }
 boot();
