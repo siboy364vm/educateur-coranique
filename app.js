@@ -5,7 +5,7 @@ const KEY = 'ec.v1';
 const DAY = 86400000;
 const CHUNK = 5;      // versets par leçon
 const MAX_EX = 10;    // exercices par leçon
-const XP = { lesson: 10, perfect: 5, practice: 5, quizPass: 20, quizTry: 5, hadith: 5 };
+const XP = { lesson: 10, perfect: 5, practice: 5, quizPass: 20, quizTry: 5, hadith: 5, recite: 10 };
 const GOALS = [[10, 'Détendu'], [20, 'Normal'], [30, 'Sérieux'], [50, 'Intense']];
 const COLORS = [['#58cc02', '#58a700'], ['#ce82ff', '#a568cc'], ['#1cb0f6', '#1899d6'], ['#ff9600', '#e08600'], ['#ff86d0', '#e070b5'], ['#2bc4a6', '#1fa088']];
 const ZIG = [0, 44, 66, 44, 0, -44, -66, -44];
@@ -40,6 +40,35 @@ async function getJSON(f) {
 }
 const surahFile = n => `data/coran/sourates/${String(n).padStart(3, '0')}.json`;
 
+/* Récitation vocale : la transcription du navigateur est comparée mot à mot au verset (le tajwid n'est pas jugé) */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const arNorm = s => String(s).replace(/[ٱأإآ]/g, 'ا').replace(/[ؐ-ًؚ-ٰٟۖ-ۭـ]/g, '')
+  .replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '')
+  .replace(/[^ء-ي\s]/g, ' ').split(/\s+/).filter(Boolean);
+function lev(a, b) {
+  let p = [...Array(b.length + 1).keys()];
+  for (let i = 1; i <= a.length; i++) {
+    const q = [i];
+    for (let j = 1; j <= b.length; j++) q[j] = Math.min(p[j] + 1, q[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    p = q;
+  }
+  return p[b.length];
+}
+const sameWord = (a, b) => a === b || lev(a, b) <= (Math.max(a.length, b.length) >= 9 ? 2 : Math.max(a.length, b.length) >= 5 ? 1 : 0);
+// Plus longue sous-suite commune : chaque mot attendu est marqué entendu ou manquant
+function compareRecitation(expected, spoken) {
+  const e = arNorm(expected), s = arNorm(spoken);
+  const t = [...Array(e.length + 1)].map(() => new Array(s.length + 1).fill(0));
+  for (let i = e.length - 1; i >= 0; i--) for (let j = s.length - 1; j >= 0; j--)
+    t[i][j] = sameWord(e[i], s[j]) ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
+  const marks = new Array(e.length).fill(false);
+  for (let i = 0, j = 0; i < e.length && j < s.length;) {
+    if (sameWord(e[i], s[j]) && t[i][j] === t[i + 1][j + 1] + 1) { marks[i] = true; i++; j++; }
+    else if (t[i + 1][j] >= t[i][j + 1]) i++; else j++;
+  }
+  return { score: e.length ? marks.filter(Boolean).length / e.length : 0, marks };
+}
+
 /* Icônes : formes simples et motifs géométriques uniquement */
 const I = {
   star: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><g fill="${c}"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="5" y="5" width="14" height="14" rx="2" transform="rotate(45 12 12)"/></g></svg>`,
@@ -50,6 +79,7 @@ const I = {
   trophy: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="${c}" d="M7 3h10v2h3.5v1.5A4.5 4.5 0 0 1 16.6 11 5 5 0 0 1 13 13.8V17h3v4H8v-4h3v-3.2A5 5 0 0 1 7.4 11 4.5 4.5 0 0 1 3.5 6.5V5H7zm0 3.5H5.3A2.8 2.8 0 0 0 7 9zm10 0V9a2.8 2.8 0 0 0 1.7-2.5z"/></svg>`,
   refresh: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 3.5V9h-5.5" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   sound: (s = 22, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9h4l5-4v14l-5-4h-4z" fill="${c}"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.5 8.5 0 0 1 0 12" stroke="${c}" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`,
+  mic: (s = 24, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="2" width="7" height="12.5" rx="3.5" fill="${c}"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`,
   x: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
   home: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path fill="${c}" d="M12 2.5l9.5 8.2V21a1 1 0 0 1-1 1H15v-6.5H9V22H3.5a1 1 0 0 1-1-1V10.7z"/></svg>`,
   chart: (s = 26, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><g fill="${c}"><rect x="3" y="12" width="5" height="9" rx="1.5"/><rect x="9.5" y="6" width="5" height="15" rx="1.5"/><rect x="16" y="2.5" width="5" height="18.5" rx="1.5"/></g></svg>`,
@@ -77,9 +107,10 @@ async function boot() {
 /* Profil courant et calculs de progression */
 const me = () => state.profiles.find(p => p.id === cur);
 const memo = () => (state.memo[cur] = state.memo[cur] || {});
-const prefs = () => (state.prefs[cur] = Object.assign({ fr: true, uthmani: false, reciter: 'husary', goal: 20 }, state.prefs[cur]));
+const prefs = () => (state.prefs[cur] = Object.assign({ fr: true, uthmani: false, reciter: 'husary', goal: 20, voice: false }, state.prefs[cur]));
 const lessonsDone = n => (state.lessons[cur] || {})[n] || 0;
 const isValid = n => !!(memo()[n] && memo()[n].validated);
+const voiceOn = () => !!(SR && prefs().voice);
 const isDue = n => isValid(n) && memo()[n].due <= Date.now();
 const colorOf = id => COLORS[[...String(id)].reduce((t, c) => t + c.charCodeAt(0), 0) % COLORS.length][0];
 const mine = pid => state.log.filter(l => l.profile === pid);
@@ -174,7 +205,7 @@ function unitHtml(u, ui, ci) {
   return `<div class="unit" style="background:${lockedUnit ? 'var(--lock-d)' : c}">
       <div class="row"><div><div class="k">Étape ${u.rank} · Juz ${u.s.juz}</div><div class="t">${esc(u.s.name_fr)}</div></div><div class="ar">${esc(u.s.name_ar)}</div></div>
       <div class="k" style="text-transform:none;letter-spacing:0">${u.s.count} versets · ${u.lessons} leçon(s) · ${valid ? 'validée' : ld + ' leçon(s) faite(s)'}</div>
-      <div class="acts"><button class="chip" onclick="readSurah(${n})">${I.book(16, '#fff')}Lire</button>${valid ? '' : `<button class="chip" onclick="startQuiz(${n})">${I.trophy(16, '#fff')}Passer le test</button>`}</div>
+      <div class="acts"><button class="chip" onclick="readSurah(${n})">${I.book(16, '#fff')}Lire</button>${valid ? '' : `<button class="chip" onclick="startQuiz(${n})">${I.trophy(16, '#fff')}Passer le test</button>`}${voiceOn() ? `<button class="chip" onclick="startRecite(${n})">${I.mic(16, '#fff')}Réciter</button>` : ''}</div>
     </div><div class="path">${nodes}</div>`;
 }
 function openLesson(ui, i) {
@@ -234,8 +265,19 @@ async function startLesson(n, idx) {
   });
   const room = Math.max(0, MAX_EX - chunk.length);
   steps.push(...shuffle(rest).slice(0, room));
+  if (voiceOn()) chunk.forEach((a, j) => steps.push(reciteEx(a, j ? chunk[j - 1] : v[idx * CHUNK - 1])));
   const total = steps.filter(s => s.t !== 'learn').length;
   L = { kind: 'lesson', n, idx, steps, k: 0, ok: 0, total, retried: new Set(), start: Date.now(), practice: isValid(n) || idx < lessonsDone(n) };
+  renderStep();
+}
+const reciteEx = (a, prev) => ({ t: 'recite', v: a, prev, answer: a.normalise });
+// Récitation de mémoire de toute la sourate, verset par verset
+async function startRecite(n) {
+  if (!SR) { toast('Reconnaissance vocale indisponible sur ce navigateur.'); return; }
+  let v;
+  try { v = (await getJSON(surahFile(n))).versets; } catch (e) { toast('Sourate introuvable.'); return; }
+  const steps = v.map((a, j) => reciteEx(a, v[j - 1]));
+  L = { kind: 'recite', n, steps, k: 0, ok: 0, total: steps.length, retried: new Set(), start: Date.now() };
   renderStep();
 }
 // Vérificateur : 10 versets tirés au hasard, mot manquant à retrouver, seuil 80 %
@@ -271,18 +313,27 @@ function stepBody(st) {
       ${prefs().fr && st.frag.length === st.w.length ? `<p class="muted">${esc(st.v.fr)}</p>` : ''}
       <div class="answer-line" id="line"></div><div class="bank" id="bank"></div>`;
   }
+  if (st.t === 'recite') {
+    return `<div class="prompt">Récite le verset ${st.v.n}</div>
+      <div class="muted">${esc(s.name_fr)} · ${st.prev ? 'après :' : 'début de la sourate'}</div>${st.prev ? `<div class="ar muted" style="font-size:22px">${esc(head(st.prev, 10))}</div>` : ''}
+      <div id="peek">${L.peek ? peekHtml() : `<button class="link" onclick="L.peek=true;$('peek').innerHTML=peekHtml()">Voir le verset</button>`}</div>
+      <div class="mic-wrap"><button class="mic" id="mic" onclick="micToggle()" aria-label="Parler">${I.mic(44, '#fff')}</button><div class="muted" id="micmsg">Touche le micro, récite, puis touche à nouveau.</div></div>
+      <div class="ar heard" id="heard" dir="rtl"></div>`;
+  }
   return `<div class="prompt">Quel verset vient ensuite ?</div>
     <div class="muted">${esc(s.name_fr)} · après le verset ${st.prev.n}</div><div class="ar">${esc(head(st.prev, 14))}</div>
     <div class="opts">${st.opts.map((o, i) => `<button class="opt long" data-v="${esc(o.key)}" onclick="choose(${i})">${esc(o.label)}</button>`).join('')}</div>`;
 }
+const peekHtml = () => `<div class="ar">${esc(vtext(L.steps[L.k].v))}</div>`;
 function renderStep() {
-  const st = L.steps[L.k]; L.sel = null; L.checked = false; L.order = [];
+  micStop(); const st = L.steps[L.k]; L.sel = null; L.checked = false; L.order = []; L.heard = null; L.peek = false;
   const pct = Math.round(100 * L.k / L.steps.length);
   $('app').innerHTML = `<div class="lesson">
     <div class="lhead"><button class="x" onclick="quitLesson()" aria-label="Quitter">${I.x()}</button><div class="prog"><i style="width:${pct}%"></i></div></div>
     <div class="lbody">${stepBody(st)}</div><div class="lfoot" id="foot"></div></div>`;
   if (st.t === 'order') renderOrder();
-  foot(st.t === 'learn' ? `<button class="btn" id="cta" onclick="nextStep()">Continuer</button>` : `<button class="btn" id="cta" onclick="checkStep()" disabled>Vérifier</button>`);
+  foot(st.t === 'learn' ? `<button class="btn" id="cta" onclick="nextStep()">Continuer</button>` : `<button class="btn" id="cta" onclick="checkStep()" disabled>Vérifier</button>`
+    + (st.t === 'recite' ? `<button class="link" style="width:100%;margin-top:8px" onclick="skipVoice()">Je ne peux pas parler maintenant</button>` : ''));
   window.scrollTo(0, 0);
 }
 function foot(html, cls = '') { const f = $('foot'); f.className = 'lfoot ' + cls; f.innerHTML = `<div class="in">${html}</div>`; }
@@ -303,8 +354,9 @@ function unplace(j) { if (L.checked) return; L.order.splice(j, 1); renderOrder()
 const PRAISE = ['Excellent !', 'Bravo !', 'Très bien !', 'Parfait !', 'Bien joué !'];
 function checkStep() {
   const st = L.steps[L.k]; if (L.checked) return;
-  let given;
-  if (st.t === 'order') given = L.order.map(bi => st.frag[st.bank[bi]].n).join(' ');
+  let given, rec;
+  if (st.t === 'recite') { if (!L.heard) return; micStop(); rec = L.heard.map(h => compareRecitation(st.answer, h)).sort((a, b) => b.score - a.score)[0]; given = rec.score >= PASS ? st.answer : ''; }
+  else if (st.t === 'order') given = L.order.map(bi => st.frag[st.bank[bi]].n).join(' ');
   else { if (L.sel === null) return; given = st.opts[L.sel].key; }
   const good = given === st.answer;
   L.checked = true;
@@ -312,19 +364,61 @@ function checkStep() {
   if (!L.retried.has(st)) { if (good) L.ok++; }
   if (!good && L.kind === 'lesson' && !L.retried.has(st)) {
     // L'exercice raté revient en fin de leçon, une fois
-    const again = Object.assign({}, st, st.opts ? { opts: shuffle(st.opts) } : { bank: shuffle(st.bank) });
+    const again = Object.assign({}, st, st.opts ? { opts: shuffle(st.opts) } : st.bank ? { bank: shuffle(st.bank) } : {});
     L.retried.add(again); L.steps.push(again);
   }
   let sol = '';
   if (!good) {
-    const txt = st.t === 'order' ? esc(st.frag.map(x => x.s).join(' ')) : st.t === 'next' ? esc(head(st.v, 14)) : st.w.map((x, j) => j === st.i ? `<u>${esc(x.s)}</u>` : esc(x.s)).slice(Math.max(0, st.i - 7), st.i + 8).join(' ');
+    const txt = st.t === 'recite' ? '' : st.t === 'order' ? esc(st.frag.map(x => x.s).join(' ')) : st.t === 'next' ? esc(head(st.v, 14)) : st.w.map((x, j) => j === st.i ? `<u>${esc(x.s)}</u>` : esc(x.s)).slice(Math.max(0, st.i - 7), st.i + 8).join(' ');
     sol = `<div class="sol">Bonne réponse :<div class="ar">${txt}</div></div>`;
+  }
+  if (rec) {
+    // Mots entendus en vert, mots manquants en rouge
+    const ws = words(st.v), lab = ws.length === rec.marks.length ? ws.map(x => x.s) : arNorm(st.answer);
+    sol = `<div class="sol">${Math.round(rec.score * 100)} % des mots reconnus. Le tajwid n'est pas évalué.<div class="ar">${lab.map((w, i) => `<span class="${rec.marks[i] ? 'w-ok' : 'w-ko'}">${esc(w)}</span>`).join(' ')}</div></div>`;
   }
   foot(`<div class="fb"><span class="ico">${good ? I.check(30, 'var(--green)') : I.x(26, 'var(--red)')}</span><div>${good ? pick1(PRAISE) : 'Pas tout à fait.'}${sol}</div></div>
     <button class="btn ${good ? '' : 'red'}" id="cta" onclick="nextStep()">Continuer</button>`, good ? 'ok' : 'ko');
 }
+function skipVoice() {
+  // Retire les récitations restantes de la séance
+  micStop();
+  const rest = L.steps.slice(L.k).filter(s => s.t === 'recite');
+  L.total -= rest.filter(s => !L.retried.has(s)).length;
+  L.steps = L.steps.slice(0, L.k).concat(L.steps.slice(L.k).filter(s => s.t !== 'recite'));
+  L.k < L.steps.length ? renderStep() : finish();
+}
 function nextStep() { L.k++; L.k < L.steps.length ? renderStep() : finish(); }
-function quitLesson() { if (confirm('Quitter ? La progression de cette séance sera perdue.')) { L = null; render(); } }
+function quitLesson() { micStop(); if (confirm('Quitter ? La progression de cette séance sera perdue.')) { L = null; render(); } }
+
+let rec = null;
+function micStop() { if (rec) { rec.onend = rec.onresult = rec.onerror = null; try { rec.abort(); } catch (e) {} rec = null; const m = $('mic'); if (m) m.classList.remove('on'); } }
+function micToggle() {
+  if (!L || L.checked) return;
+  if (rec) { rec.stop(); return; }
+  if (!SR) { toast('Reconnaissance vocale indisponible sur ce navigateur.'); return; }
+  const r = rec = new SR();
+  r.lang = 'ar-SA'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
+  let segs = [], err = null;
+  r.onresult = e => {
+    segs = [...e.results].map(x => [...x].map(a => a.transcript));
+    $('heard').textContent = segs.map(x => x[0]).join(' ');
+  };
+  r.onerror = e => { err = e.error; };
+  r.onend = () => {
+    rec = null; $('mic').classList.remove('on');
+    const msgs = { 'not-allowed': 'Micro refusé. Autorise le micro pour ce site dans le navigateur.', 'service-not-allowed': 'Micro refusé. Autorise le micro pour ce site dans le navigateur.', network: 'La reconnaissance vocale demande une connexion internet.', 'language-not-supported': 'Ce navigateur ne reconnaît pas l\'arabe.', 'audio-capture': 'Aucun micro détecté.' };
+    if (!segs.length) { $('micmsg').textContent = msgs[err] || 'Rien entendu. Touche le micro et réessaie.'; return; }
+    // Une transcription par rang d'alternative ; la meilleure est retenue à la vérification
+    const n = Math.max(...segs.map(x => x.length));
+    L.heard = [...Array(n)].map((_, i) => segs.map(x => x[i] || x[0]).join(' '));
+    $('micmsg').textContent = 'Touche « Vérifier », ou le micro pour recommencer.';
+    $('cta').disabled = false;
+  };
+  try { r.start(); } catch (e) { rec = null; toast('Impossible de démarrer le micro.'); return; }
+  L.heard = null; $('cta').disabled = true; $('heard').textContent = '';
+  $('mic').classList.add('on'); $('micmsg').textContent = 'J\'écoute… touche à nouveau quand tu as fini.';
+}
 
 let audioEl = null;
 function playVerse(n, v) {
@@ -346,6 +440,11 @@ function finish() {
     if (!L.practice) { (state.lessons[cur] = state.lessons[cur] || {})[n] = Math.max(lessonsDone(n), L.idx + 1); }
     state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'lesson', surah: n, lesson: L.idx + 1, score: Math.round(acc * 100), xp, minutes: mins });
     title = L.practice ? 'Entraînement terminé !' : 'Leçon terminée !';
+  } else if (L.kind === 'recite') {
+    xp = acc >= PASS ? XP.recite : XP.practice;
+    state.log.push({ id: uid(), profile: cur, ts: Date.now(), type: 'recite', surah: n, score: Math.round(acc * 100), xp, minutes: mins });
+    title = 'Récitation terminée !';
+    msg = 'Seuls les mots sont vérifiés, pas le tajwid. Fais aussi écouter ta récitation à un enseignant.';
   } else {
     const score = acc; pass = score >= PASS;
     const m = memo(); const e = m[n] = m[n] || { validated: false, box: 0, due: 0 };
@@ -447,6 +546,9 @@ function viewMe() {
     <div class="card"><h3>Réglages</h3>
       <label class="switch"><input type="checkbox" ${pr.fr ? 'checked' : ''} onchange="prefs().fr=this.checked;save()"> Afficher la traduction</label>
       <label class="switch"><input type="checkbox" ${pr.uthmani ? 'checked' : ''} onchange="prefs().uthmani=this.checked;save()"> Texte uthmani</label>
+      ${SR ? `<label class="switch"><input type="checkbox" ${pr.voice ? 'checked' : ''} onchange="prefs().voice=this.checked;save();render()"> Réciter à voix haute (micro)</label>
+        <p class="muted small">Ta voix est envoyée au service de reconnaissance du navigateur (Google sur Chrome, Apple sur Safari) pour être transcrite. Seuls les mots sont vérifiés, pas le tajwid.</p>`
+        : '<p class="muted small">Récitation à voix haute : non disponible sur ce navigateur. Essaie Chrome sur Android ou Safari sur iPhone.</p>'}
       ${reciters.length ? `<p class="muted" style="margin:10px 0 6px">Récitateur</p><select onchange="prefs().reciter=this.value;save()">${reciters.map(r => `<option value="${esc(r.id)}" ${pr.reciter === r.id ? 'selected' : ''}>${esc(r.nom)}</option>`).join('')}</select>` : ''}</div>
     <button class="btn ghost" onclick="parentSpace()">Espace parent</button>
     <button class="btn ghost" onclick="switchProfile()">Changer de profil</button>
@@ -478,6 +580,7 @@ function logLine(l) {
   const s = data.surahs.find(x => x.number === l.surah), name = esc(s ? s.name_fr : l.surah || '');
   const what = l.type === 'quiz' ? `Vérificateur ${l.score} %${l.pass ? ' (validé)' : ' (échec)'} · ${name}`
     : l.type === 'lesson' ? `Leçon ${l.lesson} · ${name} · ${l.score} %`
+    : l.type === 'recite' ? `Récitation · ${name} · ${l.score} % des mots`
     : l.type === 'hadith' ? 'Hadith du jour lu' : `Lecture · ${name}`;
   return `<div class="muted small">${new Date(l.ts).toLocaleDateString('fr-FR')} · ${what} · ${l.minutes || 0} min${l.xp ? ' · +' + l.xp + ' XP' : ''}</div>`;
 }
